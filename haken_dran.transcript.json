@@ -1,0 +1,1154 @@
+[
+  {
+    "start": "00:00:00,000",
+    "end": "00:00:06,000",
+    "speaker": "Dennis",
+    "text": "Haken dran. Das Social-Media-Update der CT."
+  },
+  {
+    "start": "00:00:06,000",
+    "end": "00:00:07,000",
+    "speaker": "Gavin",
+    "text": "Grüß dich, Kevin."
+  },
+  {
+    "start": "00:00:07,000",
+    "end": "00:00:08,000",
+    "speaker": "Dennis",
+    "text": "Hallo, Dennis."
+  },
+  {
+    "start": "00:00:08,000",
+    "end": "00:00:09,000",
+    "speaker": "Gavin",
+    "text": "Na, wie ist die Lage?"
+  },
+  {
+    "start": "00:00:09,000",
+    "end": "00:00:10,000",
+    "speaker": "Dennis",
+    "text": "Ja, ich sitze am Meer."
+  },
+  {
+    "start": "00:00:10,000",
+    "end": "00:00:11,000",
+    "speaker": "Gavin",
+    "text": "Ja?"
+  },
+  {
+    "start": "00:00:11,000",
+    "end": "00:00:13,000",
+    "speaker": "Dennis",
+    "text": "Nein. Überhaupt nicht."
+  },
+  {
+    "start": "00:00:13,000",
+    "end": "00:00:14,000",
+    "speaker": "Gavin",
+    "text": "Nein, ne?"
+  },
+  {
+    "start": "00:00:14,000",
+    "end": "00:00:15,000",
+    "speaker": "Dennis",
+    "text": "Ich sitze mitten in Essen."
+  },
+  {
+    "start": "00:00:15,000",
+    "end": "00:00:16,000",
+    "speaker": "Gavin",
+    "text": "Ja."
+  },
+  {
+    "start": "00:00:16,000",
+    "end": "00:00:18,000",
+    "speaker": "Dennis",
+    "text": "Wo genau, bleibt für immer mein Geheimnis."
+  },
+  {
+    "start": "00:00:18,000",
+    "end": "00:00:21,000",
+    "speaker": "Gavin",
+    "text": "Aber ihr wisst jetzt wahrscheinlich von der Art, wie der Wind hier ins Mikrofon wird, eh schon wieder."
+  },
+  {
+    "start": "00:00:21,000",
+    "end": "00:00:22,000",
+    "speaker": "Dennis",
+    "text": "Ja, genau."
+  },
+  {
+    "start": "00:00:22,000",
+    "end": "00:00:24,000",
+    "speaker": "Gavin",
+    "text": "Also das muss ich mal eben direkt hauskippen, ne?"
+  },
+  {
+    "start": "00:00:24,000",
+    "end": "00:00:36,000",
+    "speaker": "Dennis",
+    "text": "Also Klopps44 hat bei den Spotify-Kommentaren um, ich guck mal auf die Uhrzeit, die Folge kommt ja immer online um 6 Uhr, um 8.55 Uhr kommentiert."
+  },
+  {
+    "start": "00:00:36,000",
+    "end": "00:00:43,000",
+    "speaker": "Gavin",
+    "text": "Guten Morgen, war Kevin vielleicht hier, Frankfurter Straße 2 in Niedernhausen? Und da muss ich sagen, ja, genau da war ich."
+  },
+  {
+    "start": "00:00:43,000",
+    "end": "00:00:45,000",
+    "speaker": "Dennis",
+    "text": "Bist du auf die Hausnummer?"
+  },
+  {
+    "start": "00:00:46,000",
+    "end": "00:01:04,000",
+    "speaker": "Gavin",
+    "text": "Ziemlich beeindruckend. Hat auch jemand bei Amphibiverse mir geschrieben, dass ich offenbar überschätzt habe, also Gregor hat geschrieben, ich glaube du hast überschätzt, wie viele Kings of Kebabs es in Hessen gibt, Niedernhausen, da sieht's nach Tal aus."
+  },
+  {
+    "start": "00:01:04,000",
+    "end": "00:01:14,000",
+    "speaker": "Dennis",
+    "text": "Und diese Nachricht kam um 6.18 Uhr. Das heißt, 18 Minuten nachdem die Folge online war, wurden wir schon gedoxt."
+  },
+  {
+    "start": "00:01:14,000",
+    "end": "00:01:16,000",
+    "speaker": "Gavin",
+    "text": "Ja, das ist doch völliger Wahnsinn."
+  },
+  {
+    "start": "00:01:16,000",
+    "end": "00:01:18,000",
+    "speaker": "Dennis",
+    "text": "Das ist wirklich völliger Wahnsinn."
+  },
+  {
+    "start": "00:01:18,000",
+    "end": "00:01:34,000",
+    "speaker": "Gavin",
+    "text": "Übrigens, ich hab heute so ein Posting geschrieben, das lautete Mastodon, ja aber, Bluesguy, ja man, Ex, ja trotzdem und Threads, ja und."
+  },
+  {
+    "start": "00:01:35,000",
+    "end": "00:01:44,000",
+    "speaker": "Dennis",
+    "text": "Und bei Mastodon wurde das fleißig ernsthaft kommentiert. Da hatte ich wohl recht mit dem Ja aber."
+  },
+  {
+    "start": "00:01:44,000",
+    "end": "00:01:49,000",
+    "speaker": "Gavin",
+    "text": "Ja, wirklich, also da hast du wirklich sozusagen selber Proof of Concept reingelegt."
+  },
+  {
+    "start": "00:01:49,000",
+    "end": "00:01:53,000",
+    "speaker": "Dennis",
+    "text": "Ja, meinen Aufenthaltsort gestern hat übrigens niemand erraten."
+  },
+  {
+    "start": "00:01:53,000",
+    "end": "00:01:56,000",
+    "speaker": "Gavin",
+    "text": "Du hast auch außer quietschenden Schuhen und Koffern nichts verraten."
+  },
+  {
+    "start": "00:01:56,000",
+    "end": "00:02:04,000",
+    "speaker": "Dennis",
+    "text": "Ja, das musste aber, also ich fand, das musste reichen. So, und jetzt, guck mal, hört man das?"
+  },
+  {
+    "start": "00:02:04,000",
+    "end": "00:02:11,000",
+    "speaker": "Gavin",
+    "text": "Oh, warte, Schienen, wir nehmen auf um 17.15 und 11 Sekunden. Sind das schon die Tipps?"
+  },
+  {
+    "start": "00:02:11,000",
+    "end": "00:02:18,000",
+    "speaker": "Dennis",
+    "text": "Ja, ich gucke aus dem Fenster raus und sehe zwei Löwen vor so Obelisken sitzen."
+  },
+  {
+    "start": "00:02:18,000",
+    "end": "00:02:19,000",
+    "speaker": "Gavin",
+    "text": "Ja."
+  },
+  {
+    "start": "00:02:19,000",
+    "end": "00:02:30,000",
+    "speaker": "Dennis",
+    "text": "So ein bisschen wie die Sphinx sehen die aus. Aus Steinen und dahinter ein großes Dreieck auf einem Hochhausdach."
+  },
+  {
+    "start": "00:02:30,000",
+    "end": "00:02:32,000",
+    "speaker": "Gavin",
+    "text": "Okay, das wird lösbar sein, denke ich."
+  },
+  {
+    "start": "00:02:32,000",
+    "end": "00:02:37,000",
+    "speaker": "Dennis",
+    "text": "Ja, das ist lösbar, oder? Stadt sage ich nicht, aber die Leute folgen mir, ne?"
+  },
+  {
+    "start": "00:02:37,000",
+    "end": "00:02:38,000",
+    "speaker": "Gavin",
+    "text": "Aber du bist in Deutschland, ne?"
+  },
+  {
+    "start": "00:02:38,000",
+    "end": "00:02:39,000",
+    "speaker": "Dennis",
+    "text": "Ich bin in Deutschland."
+  },
+  {
+    "start": "00:02:39,000",
+    "end": "00:02:40,000",
+    "speaker": "Gavin",
+    "text": "Ja, okay."
+  },
+  {
+    "start": "00:02:40,000",
+    "end": "00:02:41,000",
+    "speaker": "Dennis",
+    "text": "Ja."
+  },
+  {
+    "start": "00:02:41,000",
+    "end": "00:02:42,000",
+    "speaker": "Gavin",
+    "text": "Ja, das ist machbar."
+  },
+  {
+    "start": "00:02:42,000",
+    "end": "00:02:50,000",
+    "speaker": "Dennis",
+    "text": "So, warte, jetzt muss ich mich erstmal wieder hinsetzen, um zu gucken, was wir noch auf der Liste haben."
+  },
+  {
+    "start": "00:02:50,000",
+    "end": "00:02:54,000",
+    "speaker": "Gavin",
+    "text": "Ich wollte noch mit dir kurz darüber sprechen, wo sich Elon Musk rumtreibt."
+  },
+  {
+    "start": "00:02:54,000",
+    "end": "00:02:56,000",
+    "speaker": "Dennis",
+    "text": "Können wir auch genauso beschreiben."
+  },
+  {
+    "start": "00:02:56,000",
+    "end": "00:03:02,000",
+    "speaker": "Gavin",
+    "text": "Einem Raum mit dunkler Holzverteflung. Draußen ein recht breiter Fluss hinter den großen Fenstern."
+  },
+  {
+    "start": "00:03:02,000",
+    "end": "00:03:07,000",
+    "speaker": "Dennis",
+    "text": "Neben ihm große Sessel und rote Flaggen mit einem Halbmond und einem Stern drauf."
+  },
+  {
+    "start": "00:03:07,000",
+    "end": "00:03:15,000",
+    "speaker": "Gavin",
+    "text": "Bis zum Halbmond dachte ich Kanzlerbungalow Bonn, aber nicht Kanzlerbungalow."
+  },
+  {
+    "start": "00:03:15,000",
+    "end": "00:03:22,000",
+    "speaker": "Dennis",
+    "text": "Ja, und neben dem großen Sessel, oder nicht neben dem großen Sessel, neben ihm sitzt Recep Tayyip Erdogan,"
+  },
+  {
+    "start": "00:03:22,000",
+    "end": "00:03:33,000",
+    "speaker": "Gavin",
+    "text": "der gern von Elon Musk hätte, dass er seine siebte Fabrik für Tesla in der Türkei baut und gleichzeitig auch wieder eins dieser Länderjahre, auf die man kritisch gucken muss, wegen X."
+  },
+  {
+    "start": "00:03:33,000",
+    "end": "00:03:48,000",
+    "speaker": "Dennis",
+    "text": "Ja, allerdings. Und das ist so, die Schlagzahl der Autokraten, mit denen sich Elon Musk gut zu verstehen scheint oder sogar in einem Raum gesehen wird, erhöht sich zusehends."
+  },
+  {
+    "start": "00:03:48,000",
+    "end": "00:03:53,000",
+    "speaker": "Gavin",
+    "text": "Und das ist natürlich ein ganz fürchterlicher Fakt einfach."
+  },
+  {
+    "start": "00:03:53,000",
+    "end": "00:03:58,000",
+    "speaker": "Dennis",
+    "text": "Leider nicht überraschend, aber es ist relativ schwierig dann ernst zu nehmen, wenn er sich wieder hinstellt und davon spricht,"
+  },
+  {
+    "start": "00:03:58,000",
+    "end": "00:04:12,000",
+    "speaker": "Gavin",
+    "text": "dass der tolle Marktplatz des Internets ein Zuhause für Redefreiheit ist und er sich dann vor allem mit Leuten trifft, die dieselbe in ihrem Land einschränken oder sogar das Äußern unliebsamer Meinungen sogar mit Haft oder schlimmeren Bestrafen."
+  },
+  {
+    "start": "00:04:15,000",
+    "end": "00:04:25,000",
+    "speaker": "Dennis",
+    "text": "Den Marktplatzbegriff, den werden wir heute hier auch nochmal hören. Da kannst du dich schon drauf freuen, von einer Person, wo ich dachte, hätte ich jetzt nicht dort verortet."
+  },
+  {
+    "start": "00:04:25,000",
+    "end": "00:04:26,000",
+    "speaker": "Gavin",
+    "text": "Was ein Teaser."
+  },
+  {
+    "start": "00:04:26,000",
+    "end": "00:04:40,000",
+    "speaker": "Dennis",
+    "text": "Bei X ist ansonsten Jenga angesagt. Da gibt's Ausfälle. Benutzer melden Probleme dabei, Beiträge zu laden. Du hast auch ein bisschen da Jenga erlebt heute."
+  },
+  {
+    "start": "00:04:40,000",
+    "end": "00:04:49,000",
+    "speaker": "Gavin",
+    "text": "Ich hab meine Jenga-Screenshots heute im Minutentakt an dich weitergeballert. Bei mir ging nichts mehr. Also so weit, dass mein Account so angezeigt wurde, als wäre er leer."
+  },
+  {
+    "start": "00:04:49,000",
+    "end": "00:05:05,000",
+    "speaker": "Dennis",
+    "text": "Und das hat mir so einen kurzen Moment gegeben, wo ich dachte, ist das jetzt der Anlass wirklich mal alles zu löschen? So fühlt sich das an? Könnte ich damit leben? Aber auch Notifications wurden nicht geladen, Antworten unter Posts wurden nicht geladen."
+  },
+  {
+    "start": "00:05:05,000",
+    "end": "00:05:16,000",
+    "speaker": "Gavin",
+    "text": "Also es hat nichts funktioniert heute. Es ist mal wieder Jenga-Time. Und vielleicht hat das was damit zu tun, als Elon Musk wieder in irgendein Rechenzentrum gefahren ist und die 19 Zoll Racks aus den Wänden gerissen hat."
+  },
+  {
+    "start": "00:05:16,000",
+    "end": "00:05:30,000",
+    "speaker": "Dennis",
+    "text": "Er ist ja in der Türkei. Er kann ja nicht gerade zweiteilen. Bevor wir heute in die Themen für heute, würde ich gerne mit dem Nicht-Thema des Tages starten."
+  },
+  {
+    "start": "00:05:30,000",
+    "end": "00:05:53,000",
+    "speaker": "Gavin",
+    "text": "Elon Musk hat der Gewerkschaft der Auto-Arbeiter in den USA den blauen Haken entzogen. Und vielleicht ist schon diese Personalisierung das Problem, dass er das gar nicht persönlich getan hat. Da haben uns mehrere Leute drauf hingewiesen. Ich glaube im Fedet auch, im Haken dran Fedet."
+  },
+  {
+    "start": "00:05:54,000",
+    "end": "00:06:22,000",
+    "speaker": "Dennis",
+    "text": "X hat sich geäußert dazu mittlerweile und sagt, nee so war das nicht, sondern die Richtlinien besagen, dass man den blauen Haken auch mal kurzzeitig verlieren kann, wenn man das Profilbild verändert. Und schieben ist darauf. Mittlerweile ist dieser blaue Haken auch wieder da. Und ab und zu haben wir ja mal so Fälle, wo wir am Ende sagen, ja der Verdacht liegt natürlich immer nahe, aber da war es wohl wirklich einfach so passiert."
+  },
+  {
+    "start": "00:06:22,000",
+    "end": "00:06:48,000",
+    "speaker": "Gavin",
+    "text": "Ja und es gibt auch Leute, die das so ein bisschen für sich ausnutzen. Jan Böhmermann ist ein ganz bekanntes Beispiel. Der spricht ja immer vom Haken der Schande, der ihm gegen seinen Willen immer wieder verliehen wird, weil er so groß ist mit seinem Account. Und er ändert dann regelmäßig sein Profilbild, damit der blaue Haken wieder für eine kurze Zeit verschwindet. Also scheint es auch da was dran zu sein, dass wenn du diesen Haken hast, dass du ihn kurzzeitig ausgeblendet bekommst, wenn du irgendetwas an deinem Profil, zum Beispiel das Bild veränderst."
+  },
+  {
+    "start": "00:06:48,000",
+    "end": "00:06:59,359",
+    "speaker": "Dennis",
+    "text": "Und das ist hier offenbar passiert und dementsprechend, es hätte gut ins Narrativ gepasst, aber nicht alles, was immer gut ins Narrativ passt, ist auch so zu erklären."
+  },
+  {
+    "start": "00:06:59,359",
+    "end": "00:07:29,339",
+    "speaker": "Gavin",
+    "text": "So und jetzt starten wir und gehen rein und wir beginnen heute mit Apple. Nach dem Apple-Event in der vergangenen Woche hat Tim Cook mit John Dickerson gesprochen. John Dickerson ist ein Journalist von CBS Sunday Morning und das war ein Interview über eine ganze Reihe verschiedener Themen, aber ein Thema war die Entscheidung von Apple, weiter Geld in Ex zu stecken."
+  },
+  {
+    "start": "00:07:30,339",
+    "end": "00:07:32,339",
+    "speaker": "Dennis",
+    "text": "Wir berichteten."
+  },
+  {
+    "start": "00:07:32,339",
+    "end": "00:07:47,480",
+    "speaker": "Gavin",
+    "text": "Genau, wir berichteten und genau deshalb ja auch nochmal interessant, wir haben uns ja auch diese Fragen gestellt, warum eigentlich und John Dickerson hat das auch gefragt, weil Apple ja durchaus auch Kritik sich dafür anhören muss."
+  },
+  {
+    "start": "00:07:47,480",
+    "end": "00:08:04,880",
+    "speaker": "Dennis",
+    "text": "Und jetzt sage ich dir mal, was Tim Cook geantwortet hat, im Allgemeinen bin ich der Meinung, dass Twitter ein wichtiges Ding ist, ich mag das Konzept, dass es für den Diskurs da ist und als öffentlicher Marktplatz dient. Es gibt aber auch einige Dinge, die ich nicht mag."
+  },
+  {
+    "start": "00:08:06,260",
+    "end": "00:08:11,700",
+    "speaker": "Gavin",
+    "text": "Vielen Dank für diesen tiefen Einblick ins Seelenleben eines milliardenschweren CEOs."
+  },
+  {
+    "start": "00:08:11,739",
+    "end": "00:08:28,640",
+    "speaker": "Dennis",
+    "text": "Da hat John Dickerson nochmal nachgehakt, sagt, es gibt Diskurs und es gibt Antisemitismus. Tim Cook antwortet, ja das ist abscheulich, dafür gibt es einfach keinen Platz. John Dickerson fragt nach, ist das etwas, das sie ständig überprüfen? Tim Cook antwortet, das ist etwas, was wir uns ständig fragen."
+  },
+  {
+    "start": "00:08:31,079",
+    "end": "00:08:33,080",
+    "speaker": "Gavin",
+    "text": "Er spricht in Rätseln."
+  },
+  {
+    "start": "00:08:33,080",
+    "end": "00:08:38,020",
+    "speaker": "Dennis",
+    "text": "Ja, also knallhart nachgefragt ist das jetzt auch nicht, das ist einfach so."
+  },
+  {
+    "start": "00:08:38,299",
+    "end": "00:09:00,320",
+    "speaker": "Gavin",
+    "text": "Naja, aber es ist für so eine CBS Sunday Morning Fernsehsendung, bei der auch Leute, die jetzt nicht zwangsläufig in so Tech-Kontexten gut ausgestattet sind, also von der Nerdiness her, ist das vielleicht auch gar nicht erwartbar oder zu leisten, da jetzt so super knallhart investigativ reinzugehen."
+  },
+  {
+    "start": "00:09:00,320",
+    "end": "00:09:06,320",
+    "speaker": "Dennis",
+    "text": "Und dafür sind diese drei Rückfragen zum selben Thema eigentlich dann doch relativ scharf nachgefragt, finde ich."
+  },
+  {
+    "start": "00:09:06,320",
+    "end": "00:09:27,059",
+    "speaker": "Gavin",
+    "text": "Erstaunlich finde ich, dass Tim Cook da so rumeiert, das kann man ja gar nicht anders sagen, also auf die Frage, hey da ist Antisemitismus, also überprüft ihr das? Und er sagt, naja wir fragen uns das regelmäßig, ist halt die schwächstmögliche Antwort auf eine Frage, bei der es keine zwei Meinungen geben darf, meines Erachtens."
+  },
+  {
+    "start": "00:09:27,099",
+    "end": "00:09:34,599",
+    "speaker": "Dennis",
+    "text": "Mhm, ist so. Und die Antworten fallen aber trotzdem so ein bisschen in die Teflonpfanne, so."
+  },
+  {
+    "start": "00:09:34,599",
+    "end": "00:09:56,359",
+    "speaker": "Gavin",
+    "text": "Ja, ja, ja. Und ich würde mir wünschen, dass da ganz offensichtlich andere Entscheidungen getroffen würden, als hier jetzt auch noch die Formulierung, die Marketing-eigene Formulierung von X oder wie Tim Cook sagt, Twitter, weiterhin zu übernehmen und zu sagen, hey das ist der Marktplatz des Internets."
+  },
+  {
+    "start": "00:09:56,359",
+    "end": "00:10:13,140",
+    "speaker": "Dennis",
+    "text": "Also das ist eine Formulierung, die haben wir hier auch schon mal so ein bisschen, zumindest in Teilen, auch als rechte Dog Whistle identifizieren können. Und da muss man sagen, das geht nicht. Also da macht er sich zum Gehilfen von jemandem, der sich halt gerade mit Erdogan auf den Tee trifft."
+  },
+  {
+    "start": "00:10:13,979",
+    "end": "00:10:24,739",
+    "speaker": "Gavin",
+    "text": "Exakt so ist das. So. Und es ist eine typische Dienstagsausgabe, die wir hier heute hinter uns bringen. Wir sind schon hier angekommen."
+  },
+  {
+    "start": "00:10:24,739",
+    "end": "00:10:30,559",
+    "speaker": "Dennis",
+    "text": "Funktionen und Emotionen."
+  },
+  {
+    "start": "00:10:30,559",
+    "end": "00:10:33,640",
+    "speaker": "Gavin",
+    "text": "Wirklich wenig los an diesen Diensttagen."
+  },
+  {
+    "start": "00:10:33,719",
+    "end": "00:10:35,359",
+    "speaker": "Dennis",
+    "text": "Ernst, klassischer Dienstag."
+  },
+  {
+    "start": "00:10:35,359",
+    "end": "00:10:45,239",
+    "speaker": "Gavin",
+    "text": "The Verge schreibt, dass X dir jetzt mitteilt, wenn jemand einen Beitrag löscht, den du mit einer Community-Note versehen hast."
+  },
+  {
+    "start": "00:10:47,119",
+    "end": "00:11:00,619",
+    "speaker": "Dennis",
+    "text": "Also ich schreibe eine Community-Note, aus irgendeinem völlig mir nicht nachvollziehbaren Grund wird die als wichtig erachtet von allen, wird dann angezeigt und dann wird der Tweet dahinter gelöscht und dann kriege ich eine Benachrichtigung, dass der Tweet weg ist?"
+  },
+  {
+    "start": "00:11:00,619",
+    "end": "00:11:02,039",
+    "speaker": "Gavin",
+    "text": "Ja, so."
+  },
+  {
+    "start": "00:11:02,119",
+    "end": "00:11:03,020",
+    "speaker": "Dennis",
+    "text": "Okay."
+  },
+  {
+    "start": "00:11:03,979",
+    "end": "00:11:05,780",
+    "speaker": "Gavin",
+    "text": "Hab nicht so doll Emotionen dazu."
+  },
+  {
+    "start": "00:11:05,780",
+    "end": "00:11:21,080",
+    "speaker": "Dennis",
+    "text": "Gut. Dann, es sieht so aus, als gibt's nochmal ein neues Design für den Hinweis Anzeige. Also da steht ja rechts oben Ad, ne? Das ist die aktuelle Umsetzung."
+  },
+  {
+    "start": "00:11:21,159",
+    "end": "00:11:33,799",
+    "speaker": "Gavin",
+    "text": "Und unter Android gibt's jetzt diese Beschriftung hervorgehoben. Das heißt, da ist nochmal so ein kleiner grauer Hintergrund hinter diesem Ad, womit das ein bisschen mehr ins Auge fällt."
+  },
+  {
+    "start": "00:11:33,799",
+    "end": "00:11:37,080",
+    "speaker": "Dennis",
+    "text": "Achso, das steht nicht hervorgehoben, sondern das Ad wird hervorgehoben?"
+  },
+  {
+    "start": "00:11:37,080",
+    "end": "00:11:37,580",
+    "speaker": "Gavin",
+    "text": "Ja, ja."
+  },
+  {
+    "start": "00:11:37,580",
+    "end": "00:11:41,799",
+    "speaker": "Dennis",
+    "text": "Ah, okay. Ich dachte schon, man nimmt jetzt die Formulierung hervorgehoben einfach."
+  },
+  {
+    "start": "00:11:41,799",
+    "end": "00:11:42,799",
+    "speaker": "Gavin",
+    "text": "Nein, nein, nein."
+  },
+  {
+    "start": "00:11:42,799",
+    "end": "00:11:44,059",
+    "speaker": "Dennis",
+    "text": "Das hätte mich nicht gewundert."
+  },
+  {
+    "start": "00:11:44,059",
+    "end": "00:11:51,460",
+    "speaker": "Gavin",
+    "text": "Genau, uns wundert ja gar nichts mehr, aber da stand einfach nur, da ist einfach nur so ein bisschen optisch dadurch hervorgehoben."
+  },
+  {
+    "start": "00:11:51,460",
+    "end": "00:11:53,539",
+    "speaker": "Dennis",
+    "text": "Ja, okay. Ja, okay."
+  },
+  {
+    "start": "00:11:53,539",
+    "end": "00:11:56,340",
+    "speaker": "Gavin",
+    "text": "Gut, heute gar nicht so viele Emotionen, ne?"
+  },
+  {
+    "start": "00:11:56,340",
+    "end": "00:11:57,340",
+    "speaker": "Dennis",
+    "text": "Nee, irgendwie nicht."
+  },
+  {
+    "start": "00:11:57,340",
+    "end": "00:12:00,580",
+    "speaker": "Gavin",
+    "text": "Dann hier, neuer Kandidat in der Liste, Telegram."
+  },
+  {
+    "start": "00:12:02,580",
+    "end": "00:12:11,380",
+    "speaker": "Dennis",
+    "text": "Auch noch keine Überraschung? Gut, dann pass auf. Telegram schreibt, dass sie die Blockchain-Technologie in Telegram tiefer integrieren möchten."
+  },
+  {
+    "start": "00:12:11,700",
+    "end": "00:12:25,580",
+    "speaker": "Gavin",
+    "text": "Und ab November gibt es ein Wallet, das man dann aktivieren kann in den Einstellungen für NutzerInnen außerhalb der USA und einiger anderer Länder."
+  },
+  {
+    "start": "00:12:25,580",
+    "end": "00:12:35,460",
+    "speaker": "Dennis",
+    "text": "Und dieser Schritt soll es EntwicklerInnen ermöglichen, hunderte von neuen wertvollen Funktionen da reinzubringen in Telegram."
+  },
+  {
+    "start": "00:12:35,500",
+    "end": "00:12:38,219",
+    "speaker": "Gavin",
+    "text": "Ja, ich hab da leider eine sehr starke Emotion zu."
+  },
+  {
+    "start": "00:12:38,219",
+    "end": "00:12:39,219",
+    "speaker": "Dennis",
+    "text": "Ja, sag mal."
+  },
+  {
+    "start": "00:12:39,219",
+    "end": "00:12:56,859",
+    "speaker": "Gavin",
+    "text": "Also, Telegram wird von allen genutzt. Telegram ist leider aber eben auch von denen, die so, also sagen wir mal so, ein ehemals relativ bekannter, nicht populärer, aber bekannter Schlagersänger Deutschlands hat ja darüber angefangen seinen Rumgeschwurbel zu verbreiten."
+  },
+  {
+    "start": "00:12:56,859",
+    "end": "00:13:03,580",
+    "speaker": "Dennis",
+    "text": "Und als er dann eine gewisse Reichweite aufgebaut hat, hat er seinen Kanal nur noch genutzt, um seine Prepper-Tools zu bewerben."
+  },
+  {
+    "start": "00:13:03,580",
+    "end": "00:13:10,539",
+    "speaker": "Gavin",
+    "text": "Also für einen anderen Onlineshop Werbung dafür zu machen, um Dinge zu kaufen, um sich auf den Weltuntergang vorzubereiten."
+  },
+  {
+    "start": "00:13:10,539",
+    "end": "00:13:18,820",
+    "speaker": "Dennis",
+    "text": "Und für solche Leute, für die das interessant ist, Prepper-Tools über Telegram zu kaufen, für die ist es auch interessant, da direkt ihre Kryptowährung in der App zu lagern."
+  },
+  {
+    "start": "00:13:18,820",
+    "end": "00:13:22,099",
+    "speaker": "Gavin",
+    "text": "Für sonst alle anderen Menschen auf der Welt glaube ich wirklich nicht."
+  },
+  {
+    "start": "00:13:22,099",
+    "end": "00:13:25,700",
+    "speaker": "Dennis",
+    "text": "Ja, wir sagen vielleicht, das nailt die Zielgruppe, oder?"
+  },
+  {
+    "start": "00:13:25,780",
+    "end": "00:13:27,780",
+    "speaker": "Gavin",
+    "text": "Ja, Teile der Zielgruppe."
+  },
+  {
+    "start": "00:13:27,780",
+    "end": "00:13:38,820",
+    "speaker": "Dennis",
+    "text": "Ja, so ist das wahrscheinlich. Aber, ich finde da steckt noch eine andere Perspektive drin, nämlich die Perspektive der Alles-App."
+  },
+  {
+    "start": "00:13:38,820",
+    "end": "00:13:40,820",
+    "speaker": "Gavin",
+    "text": "Oh, das stimmt."
+  },
+  {
+    "start": "00:13:40,820",
+    "end": "00:13:50,179",
+    "speaker": "Dennis",
+    "text": "Also, wenn du jetzt in Telegram sowas integrierst, dann haben wir natürlich eine kleine Konkurrenzsituation zu X."
+  },
+  {
+    "start": "00:13:50,460",
+    "end": "00:13:54,179",
+    "speaker": "Gavin",
+    "text": "Zumal Telegram ja auch diese Stories eingeführt hat, relativ frisch."
+  },
+  {
+    "start": "00:13:54,179",
+    "end": "00:14:00,700",
+    "speaker": "Dennis",
+    "text": "Ja. Übrigens sehr weird mit einer Beschränkung, höchstens drei pro Tag und sieben pro Woche."
+  },
+  {
+    "start": "00:14:00,700",
+    "end": "00:14:02,700",
+    "speaker": "Gavin",
+    "text": "Was ist das denn für eine Beschränkung?"
+  },
+  {
+    "start": "00:14:02,700",
+    "end": "00:14:07,099",
+    "speaker": "Dennis",
+    "text": "Da habe ich angefangen meine Stories reinzuladen, weil ich das ausprobieren wollte."
+  },
+  {
+    "start": "00:14:07,099",
+    "end": "00:14:10,659",
+    "speaker": "Gavin",
+    "text": "Und dann war, nee geht nicht mehr, du hast heute schon drei hochgeladen."
+  },
+  {
+    "start": "00:14:10,659",
+    "end": "00:14:14,020",
+    "speaker": "Dennis",
+    "text": "Dann sind wir hier bei BeReal oder was."
+  },
+  {
+    "start": "00:14:14,020",
+    "end": "00:14:18,659",
+    "speaker": "Gavin",
+    "text": "Und wie ist das so mit Sichtbarkeit? Also würdest du sagen, sehen mehr Leute als WhatsApp-Status oder weniger?"
+  },
+  {
+    "start": "00:14:18,659",
+    "end": "00:14:19,380",
+    "speaker": "Dennis",
+    "text": "Nee, weniger."
+  },
+  {
+    "start": "00:14:19,380",
+    "end": "00:14:33,059",
+    "speaker": "Gavin",
+    "text": "Okay. Ja gut. Also nee, jedenfalls, du hast natürlich recht, es nähert sich der Everything-App an, auch eben Stories und Wallet innerhalb von einem Quartal am Ende auch gemeinsam ausgerollt."
+  },
+  {
+    "start": "00:14:33,059",
+    "end": "00:14:39,739",
+    "speaker": "Dennis",
+    "text": "Ist so ein bisschen die Frage, wo Telegram hin will. Also was ist so das Ziel dieser Unternehmung?"
+  },
+  {
+    "start": "00:14:39,739",
+    "end": "00:14:44,460",
+    "speaker": "Gavin",
+    "text": "Versucht man hier so von hinten Twitter anzugreifen, kommt jetzt so ein Micro-Blogging-Feature?"
+  },
+  {
+    "start": "00:14:44,539",
+    "end": "00:14:49,700",
+    "speaker": "Dennis",
+    "text": "Oder vielleicht Telegram-Notes, wo man dann seinen Standort teilen kann und Videos und Musik?"
+  },
+  {
+    "start": "00:14:49,700",
+    "end": "00:14:50,460",
+    "speaker": "Gavin",
+    "text": "Tja."
+  },
+  {
+    "start": "00:14:50,460",
+    "end": "00:14:51,700",
+    "speaker": "Dennis",
+    "text": "Ich freu mich."
+  },
+  {
+    "start": "00:14:51,700",
+    "end": "00:15:02,940",
+    "speaker": "Gavin",
+    "text": "Ja. So und letzte Geschichte für heute, auch noch so ein Kandidat, den wir hier nicht so oft hören, T2, auch ein Twitter-Konkurrent."
+  },
+  {
+    "start": "00:15:02,940",
+    "end": "00:15:06,940",
+    "speaker": "Dennis",
+    "text": "Blue Sky für alle, die keine Lust darauf haben, dass Leute sehen, was man schreibt."
+  },
+  {
+    "start": "00:15:06,940",
+    "end": "00:15:09,940",
+    "speaker": "Gavin",
+    "text": "Genau. T2 heißt jetzt Pebble."
+  },
+  {
+    "start": "00:15:09,940",
+    "end": "00:15:12,940",
+    "speaker": "Dennis",
+    "text": "Ich liebe die Geschichte, ne."
+  },
+  {
+    "start": "00:15:12,940",
+    "end": "00:15:24,940",
+    "speaker": "Gavin",
+    "text": "Ich liebe eine andere daran. Warum hieß es überhaupt T2? Die hatten die Domain für 7,16 Dollar im Sale gekauft."
+  },
+  {
+    "start": "00:15:24,940",
+    "end": "00:15:30,940",
+    "speaker": "Dennis",
+    "text": "Und es sollte nicht permanent so heißen, das war wohl nur der Arbeitstitel T2, so wie P92."
+  },
+  {
+    "start": "00:15:30,940",
+    "end": "00:15:42,940",
+    "speaker": "Gavin",
+    "text": "Und die haben zeitgleich jetzt zu der Namensänderung, hat Pebble jetzt noch andere Dinge angekündigt, nämlich KI-unterstützte Postings."
+  },
+  {
+    "start": "00:15:42,940",
+    "end": "00:15:50,940",
+    "speaker": "Dennis",
+    "text": "Also du hast ja normalerweise, hast du ja auf so einer Plattform so ein leeres Feld, wo du dein Posting eingeben kannst."
+  },
+  {
+    "start": "00:15:50,940",
+    "end": "00:15:52,940",
+    "speaker": "Gavin",
+    "text": "Dann steht da, what's happening oder so."
+  },
+  {
+    "start": "00:15:52,940",
+    "end": "00:15:59,940",
+    "speaker": "Dennis",
+    "text": "Und du kannst das jetzt überspringen, indem du auf ein Glühbirnen-Symbol klickst. Ideas heißt das."
+  },
+  {
+    "start": "00:15:59,940",
+    "end": "00:16:09,940",
+    "speaker": "Gavin",
+    "text": "Und da hast du dann eine Liste KI-generierter Beiträge oder Antworten, inspiriert durch deine bisherigen Aktivitäten bei Pebble."
+  },
+  {
+    "start": "00:16:09,940",
+    "end": "00:16:15,940",
+    "speaker": "Dennis",
+    "text": "Und ich sag dir, so politische AkteurInnen, Unternehmen, niemand würde den Unterschied merken."
+  },
+  {
+    "start": "00:16:15,940",
+    "end": "00:16:18,940",
+    "speaker": "Gavin",
+    "text": "Wahrscheinlich, ja."
+  },
+  {
+    "start": "00:16:18,940",
+    "end": "00:16:26,940",
+    "speaker": "Dennis",
+    "text": "Ich find toll, dass man jetzt den Namen Pebble nimmt, weil der doch, wenn ich mich recht entsinne, war das doch eigentlich der Name einer Smartwatch."
+  },
+  {
+    "start": "00:16:26,940",
+    "end": "00:16:31,940",
+    "speaker": "Gavin",
+    "text": "Die so ein bisschen davon überrannt wurde, dass dann irgendwann die Apple Watch ausgerollt wurde."
+  },
+  {
+    "start": "00:16:31,940",
+    "end": "00:16:41,940",
+    "speaker": "Dennis",
+    "text": "Und ich glaube, die Pebble Smartwatch gibt es einfach auch nicht mehr, weil sie verkauft wurde an, das muss ich jetzt mal eben hier live checken, an Fitbit."
+  },
+  {
+    "start": "00:16:41,940",
+    "end": "00:16:47,940",
+    "speaker": "Gavin",
+    "text": "Und damit inzwischen, Fitbit wurde inzwischen an Google verkauft, damit ist wahrscheinlich sogar die Markenrechte von Pebble bei Google."
+  },
+  {
+    "start": "00:16:47,940",
+    "end": "00:16:51,940",
+    "speaker": "Dennis",
+    "text": "Und ich frage mich, ob das zu Konflikten führen könnte."
+  },
+  {
+    "start": "00:16:51,940",
+    "end": "00:16:57,940",
+    "speaker": "Gavin",
+    "text": "Weiß ich nicht, ich hatte gerade, wie du sagtest, an Fitbit, das ist auch geil."
+  },
+  {
+    "start": "00:16:57,940",
+    "end": "00:17:01,940",
+    "speaker": "Dennis",
+    "text": "So total faule Menschen endlich auch mal ein Arm rein."
+  },
+  {
+    "start": "00:17:01,940",
+    "end": "00:17:06,939",
+    "speaker": "Gavin",
+    "text": "Das ist so geil, an Fitbit. Da wird belohnt, wie viele Stunden du nicht gestanden hast."
+  },
+  {
+    "start": "00:17:06,939",
+    "end": "00:17:09,939",
+    "speaker": "Dennis",
+    "text": "Ja, ja, ich lieg lieber den ganzen Tag auf der Couch und dann zieh ich immer mein an Fitbit an."
+  },
+  {
+    "start": "00:17:09,939",
+    "end": "00:17:13,939",
+    "speaker": "Gavin",
+    "text": "Je weniger Schritte du hast, desto mehr Bonuspunkte kriegst du."
+  },
+  {
+    "start": "00:17:13,939",
+    "end": "00:17:17,939",
+    "speaker": "Dennis",
+    "text": "Und die kannst du direkt in Lieferandogutscheine eintauschen."
+  },
+  {
+    "start": "00:17:17,939",
+    "end": "00:17:19,939",
+    "speaker": "Gavin",
+    "text": "Das ist ein Geschäftsmodell, oder?"
+  },
+  {
+    "start": "00:17:19,939",
+    "end": "00:17:20,939",
+    "speaker": "Dennis",
+    "text": "Das ist super geil."
+  },
+  {
+    "start": "00:17:20,939",
+    "end": "00:17:22,939",
+    "speaker": "Gavin",
+    "text": "Vielleicht machen wir einfach ab Oktober damit weiter."
+  },
+  {
+    "start": "00:17:22,939",
+    "end": "00:17:24,939",
+    "speaker": "Dennis",
+    "text": "Die Leute fragen sich ja, wo geht denn das hin, wenn es startet?"
+  },
+  {
+    "start": "00:17:24,939",
+    "end": "00:17:26,939",
+    "speaker": "Gavin",
+    "text": "Mit Gründe an Fitbit."
+  },
+  {
+    "start": "00:17:26,939",
+    "end": "00:17:29,939",
+    "speaker": "Dennis",
+    "text": "An Fitbit. Das ist wirklich so eine lustige Idee."
+  },
+  {
+    "start": "00:17:29,939",
+    "end": "00:17:36,939",
+    "speaker": "Gavin",
+    "text": "So, abgesehen davon, hat Pebble jetzt den geschlossenen Beta-Status auch beendet."
+  },
+  {
+    "start": "00:17:36,939",
+    "end": "00:17:38,939",
+    "speaker": "Dennis",
+    "text": "Also alle können sich anmelden."
+  },
+  {
+    "start": "00:17:38,939",
+    "end": "00:17:42,939",
+    "speaker": "Gavin",
+    "text": "Noch bevor wir diese Episode hier raushauen, damit sie jeder hört, besichere ich mir jetzt gleich meinen Nutzernamen."
+  },
+  {
+    "start": "00:17:42,939",
+    "end": "00:17:47,939",
+    "speaker": "Dennis",
+    "text": "Aber wir bleiben bei Blue Sky."
+  },
+  {
+    "start": "00:17:47,939",
+    "end": "00:17:53,939",
+    "speaker": "Gavin",
+    "text": "Ja, da habe ich aber Gedanken zu, weil wir nehmen diese Folge auf am Montag, dem 18. September."
+  },
+  {
+    "start": "00:17:53,939",
+    "end": "00:18:02,939",
+    "speaker": "Dennis",
+    "text": "Und am Freitag, dem 15. September, habe ich eine E-Mail bekommen, in der drin steht, T2, your invite is here, choose your handle now."
+  },
+  {
+    "start": "00:18:02,939",
+    "end": "00:18:06,939",
+    "speaker": "Gavin",
+    "text": "Da wurde mir dann gesagt, hey, vielen Dank für deine Geduld, als du dich auf die Warteliste eingetragen hast."
+  },
+  {
+    "start": "00:18:06,939",
+    "end": "00:18:08,939",
+    "speaker": "Dennis",
+    "text": "Das war so gefühlt im Februar oder so."
+  },
+  {
+    "start": "00:18:08,939",
+    "end": "00:18:10,939",
+    "speaker": "Gavin",
+    "text": "Jetzt kannst du deinen Handle claimen."
+  },
+  {
+    "start": "00:18:10,939",
+    "end": "00:18:12,939",
+    "speaker": "Dennis",
+    "text": "Und das habe ich versucht."
+  },
+  {
+    "start": "00:18:12,939",
+    "end": "00:18:16,939",
+    "speaker": "Gavin",
+    "text": "Und das hat erst nicht funktioniert, weil mein Handle auf Twitter verifiziert war."
+  },
+  {
+    "start": "00:18:16,939",
+    "end": "00:18:20,939",
+    "speaker": "Dennis",
+    "text": "Und dann musste ich bei T2 mich mit Twitter anmelden."
+  },
+  {
+    "start": "00:18:20,939",
+    "end": "00:18:22,939",
+    "speaker": "Gavin",
+    "text": "Also Legacy verified."
+  },
+  {
+    "start": "00:18:22,939",
+    "end": "00:18:26,939",
+    "speaker": "Dennis",
+    "text": "Musste mich dann auf T2 mit Twitter quasi authentifizieren."
+  },
+  {
+    "start": "00:18:26,939",
+    "end": "00:18:28,939",
+    "speaker": "Gavin",
+    "text": "Und weißt du, was dann passiert ist?"
+  },
+  {
+    "start": "00:18:28,939",
+    "end": "00:18:30,939",
+    "speaker": "Dennis",
+    "text": "Dann habe ich direkt bei Pebble einen blauen Haken bekommen."
+  },
+  {
+    "start": "00:18:30,939",
+    "end": "00:18:34,939",
+    "speaker": "Gavin",
+    "text": "Und daneben steht Twitter Legacy."
+  },
+  {
+    "start": "00:18:34,939",
+    "end": "00:18:36,939",
+    "speaker": "Dennis",
+    "text": "Das ist geil, oder?"
+  },
+  {
+    "start": "00:18:36,939",
+    "end": "00:18:40,939",
+    "speaker": "Gavin",
+    "text": "Das heißt, ich bin jetzt als Twitter Legacy verified bei T2."
+  },
+  {
+    "start": "00:18:40,939",
+    "end": "00:18:48,939",
+    "speaker": "Dennis",
+    "text": "Aber war das zu der Zeit, als der blaue Haken auch noch optisch da war in deinem Profil?"
+  },
+  {
+    "start": "00:18:48,939",
+    "end": "00:18:50,939",
+    "speaker": "Gavin",
+    "text": "Nein, jetzt, am 15. September, vor drei Tagen."
+  },
+  {
+    "start": "00:18:50,939",
+    "end": "00:18:52,939",
+    "speaker": "Dennis",
+    "text": "Das ist ja der Hammer."
+  },
+  {
+    "start": "00:18:52,939",
+    "end": "00:18:56,939",
+    "speaker": "Gavin",
+    "text": "Da muss ich mal gucken, ob Ed Horn noch frei ist bei Pebble."
+  },
+  {
+    "start": "00:18:56,939",
+    "end": "00:18:58,939",
+    "speaker": "Dennis",
+    "text": "Du musst dich dann mit Twitter anmelden."
+  },
+  {
+    "start": "00:18:58,939",
+    "end": "00:19:02,939",
+    "speaker": "Gavin",
+    "text": "Ansonsten sind alle verifizierten Handles registriert bei Pebble."
+  },
+  {
+    "start": "00:19:02,939",
+    "end": "00:19:04,939",
+    "speaker": "Dennis",
+    "text": "Das ist ja fantastisch."
+  },
+  {
+    "start": "00:19:04,939",
+    "end": "00:19:06,939",
+    "speaker": "Gavin",
+    "text": "Das ist eine mega Idee."
+  },
+  {
+    "start": "00:19:06,939",
+    "end": "00:19:10,939",
+    "speaker": "Dennis",
+    "text": "Kommt alle zu Pebble. Braucht ihr ein Invite Codes? Ich bin hier."
+  },
+  {
+    "start": "00:19:10,939",
+    "end": "00:19:14,939",
+    "speaker": "Gavin",
+    "text": "Wir genießen also den Creator Vorsprung dort."
+  },
+  {
+    "start": "00:19:14,939",
+    "end": "00:19:16,939",
+    "speaker": "Dennis",
+    "text": "Ist gut."
+  },
+  {
+    "start": "00:19:16,939",
+    "end": "00:19:18,939",
+    "speaker": "Gavin",
+    "text": "Da gehe ich gleich mal hin."
+  },
+  {
+    "start": "00:19:18,939",
+    "end": "00:19:20,939",
+    "speaker": "Dennis",
+    "text": "Ja gut, das war es aber auch schon für heute."
+  },
+  {
+    "start": "00:19:20,939",
+    "end": "00:19:22,939",
+    "speaker": "Gavin",
+    "text": "Ich muss jetzt schnell dahin auch einfach."
+  },
+  {
+    "start": "00:19:22,939",
+    "end": "00:19:24,939",
+    "speaker": "Dennis",
+    "text": "Wir haben keine Themen mehr. Wir sind fertig."
+  },
+  {
+    "start": "00:19:24,939",
+    "end": "00:19:26,939",
+    "speaker": "Gavin",
+    "text": "Wir hören uns morgen."
+  },
+  {
+    "start": "00:19:26,939",
+    "end": "00:19:28,939",
+    "speaker": "Dennis",
+    "text": "Viel Spaß bei Pebble. Bis gleich."
+  },
+  {
+    "start": "00:19:28,939",
+    "end": "00:19:30,939",
+    "speaker": "Gavin",
+    "text": "Tschüss."
+  }
+]
