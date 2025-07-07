@@ -14,9 +14,15 @@ const __dirname = path.dirname(__filename);
 const feedsPath = path.join(__dirname, 'feeds.json');
 let feeds = [];
 if (fs.existsSync(feedsPath)) {
-  try { feeds = JSON.parse(fs.readFileSync(feedsPath, 'utf-8')); }
-  catch {}
+  try { feeds = JSON.parse(fs.readFileSync(feedsPath, 'utf-8')); } catch {}
 }
+// keep compatibility with older string-only format
+let saveNeeded = false;
+feeds = Array.isArray(feeds) ? feeds.map(f => {
+  if (typeof f === 'string') { saveNeeded = true; return { url: f, title: f }; }
+  return f;
+}).filter(Boolean) : [];
+if (saveNeeded) saveFeeds();
 
 function saveFeeds() {
   fs.writeFileSync(feedsPath, JSON.stringify(feeds, null, 2));
@@ -29,11 +35,23 @@ function prompt(question) {
 
 async function selectFeed() {
   console.log('\nVerfügbare Feeds:');
-  feeds.forEach((f, i) => console.log(` ${i + 1}. ${f}`));
-  const url = await prompt('RSS-Feed URL eingeben (oder Nummer wählen): ');
-  const num = parseInt(url, 10);
-  if (num && feeds[num - 1]) return feeds[num - 1];
-  if (!feeds.includes(url)) { feeds.push(url); saveFeeds(); }
+  feeds.forEach((f, i) => console.log(` ${i + 1}. ${f.title || f.url}`));
+
+  const input = await prompt('RSS-Feed URL eingeben (oder Nummer wählen): ');
+  const num = parseInt(input, 10);
+  if (num && feeds[num - 1]) return feeds[num - 1].url;
+
+  const url = input.trim();
+  if (!feeds.some(f => f.url === url)) {
+    try {
+      const parser = new Parser();
+      const feed = await parser.parseURL(url);
+      feeds.push({ url, title: feed.title || url });
+      saveFeeds();
+    } catch (e) {
+      console.error('❌ Feed konnte nicht geladen werden:', e.message);
+    }
+  }
   return url;
 }
 
