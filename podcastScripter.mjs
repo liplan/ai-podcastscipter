@@ -163,7 +163,7 @@ Bullet-Points:`;
 
 const mp3File = process.argv[2];
 if (!mp3File) {
-  console.error('⚠️  Nutzung: node podcastsripter.mjs <audiofile.mp3>');
+  console.error('⚠️  Nutzung: node podcastScripter.mjs <audiofile.mp3>');
   process.exit(1);
 }
 
