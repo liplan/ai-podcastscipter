@@ -58,11 +58,13 @@ async function selectFeed() {
 async function fetchEpisodes(feedUrl) {
   const parser = new Parser();
   const feed = await parser.parseURL(feedUrl);
-  return feed.items.map(item => ({
+  const episodes = feed.items.map(item => ({
     title: item.title,
     url: item.enclosure?.url,
     pubDate: item.pubDate
   })).filter(e => e.url);
+  episodes.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+  return episodes;
 }
 
 async function downloadFile(url, dest) {
@@ -109,7 +111,7 @@ async function processEpisode(ep, baseDir) {
 
 (async () => {
   const feedUrl = await selectFeed();
-  const episodes = await fetchEpisodes(feedUrl);
+  const episodes = await fetchEpisodes(feedUrl); // already sorted by pubDate
   const numStr = await prompt('Wieviele Episoden ab heute transkribieren? ');
   const num = parseInt(numStr, 10) || 1;
   const baseDir = path.join(__dirname, 'podcasts');
