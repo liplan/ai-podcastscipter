@@ -79,9 +79,10 @@ async function downloadFile(url, dest) {
 }
 
 async function processEpisode(ep, baseDir) {
-  const epDir = path.join(baseDir, ep.title.replace(/[^a-z0-9]+/gi, '_'));
+  const epSlug = ep.title.replace(/[^a-z0-9]+/gi, '_');
+  const epDir  = path.join(baseDir, epSlug);
   fs.mkdirSync(epDir, { recursive: true });
-  const audioPath = path.join(epDir, 'audio.mp3');
+  const audioPath = path.join(epDir, `${epSlug}.mp3`);
 
   if (!fs.existsSync(audioPath)) {
     console.log('⬇️  Lade herunter:', ep.title);
