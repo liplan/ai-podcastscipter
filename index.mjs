@@ -38,6 +38,10 @@ async function selectFeed() {
   feeds.forEach((f, i) => console.log(` ${i + 1}. ${f.title || f.url}`));
 
   const input = await prompt('RSS-Feed URL eingeben (oder Nummer wählen): ');
+  if (!input.trim()) {
+    console.log('ℹ️  Kein Feed eingegeben, Vorgang beendet.');
+    process.exit(0);
+  }
   const num = parseInt(input, 10);
   if (num && feeds[num - 1]) return feeds[num - 1].url;
 
