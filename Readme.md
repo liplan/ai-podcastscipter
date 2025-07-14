@@ -42,3 +42,19 @@ Alle erzeugten Dateien landen unter `podcasts/<Podcastname>/`. Dort legt das Skr
 
 `feeds.json` wird im Projektordner gespeichert und speichert alle jemals eingegebenen Feed-URLs samt Titel. Beim nächsten Start können vorhandene Feeds einfach über ihre Nummer ausgewählt werden.
 
+### Korrektur erkannter Namen (`name-fixes.json`)
+
+Optional kann im Projektverzeichnis eine Datei `name-fixes.json` abgelegt werden.
+Sie enthält Zuordnungen von von GPT ausgegebenen Namen zu den korrekten Varianten.
+Das erwartete Format ist ein einfaches JSON-Objekt:
+
+```json
+{
+  "GPTName": "KorrigierterName"
+}
+```
+
+Beim Ausführen überprüft das Skript, ob diese Datei existiert und ersetzt
+gefundene Namen entsprechend. Fehlt die Datei, läuft der Prozess ohne
+zusätzliche Korrekturen weiter.
+
