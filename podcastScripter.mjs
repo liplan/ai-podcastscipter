@@ -82,7 +82,7 @@ async function transkribiere(mp3Pfad) {
         '-c', 'copy',
         pattern
       ];
-      const child = spawn(ffmpegPath, ffArgs, { stdio: 'inherit' });
+      const child = spawn(ffmpegPath, ffArgs, { stdio: 'ignore' });
       child.on('exit', c => c === 0 ? res() : rej(new Error('ffmpeg split failed')));
     });
     const parts = fs.readdirSync(tmpDir).filter(f => f.endsWith('.mp3')).sort();
