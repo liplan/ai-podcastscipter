@@ -195,3 +195,12 @@ cython_debug/
 .DS_Store
 node_modules/
 package-lock.json
+
+# Podcast script files
+audio.md
+audio.speakers.txt
+audio.summary.md
+audio.transcript.json
+audio.transcript.srt
+feeds.json
+podcasts/
