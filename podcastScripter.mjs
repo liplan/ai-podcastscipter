@@ -12,10 +12,13 @@
  */
 
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { spawn } from 'child_process';
 import { OpenAI } from 'openai';
 import SRTParser from 'srt-parser-2';
+import ffmpegPath from 'ffmpeg-static';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -32,6 +35,20 @@ if (!OPENAI_API_KEY) {
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
 const parser = new SRTParser();
 
+function parseTime(t) {
+  const [h, m, sMs] = t.split(':');
+  const [s, ms] = sMs.split(',');
+  return (+h) * 3600 + (+m) * 60 + (+s) + (+ms) / 1000;
+}
+
+function formatTime(sec) {
+  const h  = Math.floor(sec / 3600);
+  const m  = Math.floor((sec % 3600) / 60);
+  const s  = Math.floor(sec % 60);
+  const ms = Math.round((sec - Math.floor(sec)) * 1000);
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(ms).padStart(3, '0')}`;
+}
+
 async function transkribiere(mp3Pfad) {
   if (!fs.existsSync(mp3Pfad)) {
     console.error('❌  Datei nicht gefunden:', mp3Pfad);
@@ -45,15 +62,49 @@ async function transkribiere(mp3Pfad) {
   const summaryPfad     = path.join(__dirname, `${basename}.summary.md`);
   const markdownPfad    = path.join(__dirname, `${basename}.md`);
 
+  const maxSize = 25 * 1024 * 1024;
+  const fileSize = fs.statSync(mp3Pfad).size;
   console.log('📤  Transkribiere via Whisper …');
-  const whisperResp = await openai.audio.transcriptions.create({
-    file: fs.createReadStream(mp3Pfad),
-    model: 'whisper-1',
-    response_format: 'srt',
-    timestamp_granularities: ['segment'],
-  });
+  let srtText = '';
 
-  const srtText = whisperResp;
+  if (fileSize > maxSize) {
+    console.log('🔀  Datei größer 25MB → splitte in 10‑Minuten‑Teile');
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'podsplit-'));
+    const pattern = path.join(tmpDir, `${basename}-%03d.mp3`);
+    await new Promise((res, rej) => {
+      const child = spawn(ffmpegPath, ['-i', mp3Pfad, '-f', 'segment', '-segment_time', '600', '-c', 'copy', pattern], { stdio: 'inherit' });
+      child.on('exit', c => c === 0 ? res() : rej(new Error('ffmpeg split failed')));
+    });
+    const parts = fs.readdirSync(tmpDir).filter(f => f.endsWith('.mp3')).sort();
+    const allLines = [];
+    let offset = 0;
+    for (const p of parts) {
+      const resp = await openai.audio.transcriptions.create({
+        file: fs.createReadStream(path.join(tmpDir, p)),
+        model: 'whisper-1',
+        response_format: 'srt',
+        timestamp_granularities: ['segment'],
+      });
+      const segLines = parser.fromSrt(resp);
+      for (const line of segLines) {
+        line.startTime = formatTime(parseTime(line.startTime) + offset);
+        line.endTime   = formatTime(parseTime(line.endTime) + offset);
+      }
+      if (segLines.length) offset = parseTime(segLines[segLines.length - 1].endTime);
+      allLines.push(...segLines);
+    }
+    srtText = parser.toSrt(allLines);
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  } else {
+    const whisperResp = await openai.audio.transcriptions.create({
+      file: fs.createReadStream(mp3Pfad),
+      model: 'whisper-1',
+      response_format: 'srt',
+      timestamp_granularities: ['segment'],
+    });
+    srtText = whisperResp;
+  }
+
   fs.writeFileSync(srtPfad, srtText, 'utf-8');
   console.log('✅  SRT gespeichert →', srtPfad);
 
