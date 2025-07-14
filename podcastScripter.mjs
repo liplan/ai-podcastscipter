@@ -72,7 +72,17 @@ async function transkribiere(mp3Pfad) {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'podsplit-'));
     const pattern = path.join(tmpDir, `${basename}-%03d.mp3`);
     await new Promise((res, rej) => {
-      const child = spawn(ffmpegPath, ['-i', mp3Pfad, '-f', 'segment', '-segment_time', '600', '-c', 'copy', pattern], { stdio: 'inherit' });
+      const ffArgs = [
+        '-hide_banner',
+        '-nostdin',
+        '-loglevel', 'error',
+        '-i', mp3Pfad,
+        '-f', 'segment',
+        '-segment_time', '600',
+        '-c', 'copy',
+        pattern
+      ];
+      const child = spawn(ffmpegPath, ffArgs, { stdio: 'inherit' });
       child.on('exit', c => c === 0 ? res() : rej(new Error('ffmpeg split failed')));
     });
     const parts = fs.readdirSync(tmpDir).filter(f => f.endsWith('.mp3')).sort();
