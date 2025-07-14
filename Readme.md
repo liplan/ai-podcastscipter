@@ -6,6 +6,20 @@ Kleinere Fehler, wie etwa die fälschliche Zuordnung von Namen (z. B. wird ver
 
 Die Methode eignet sich perspektivisch auch zur automatisierten Verarbeitung ganzer Podcast-Serien im Batch-Verfahren
 
+## Installation
+
+1. [Node.js](https://nodejs.org/) installieren (empfohlen wird Version 18 oder neuer).
+2. Repository klonen und Abhängigkeiten einrichten:
+   ```bash
+   git clone <repo-url>
+   cd ai-podcastscipter
+   npm install
+   ```
+3. Eine Datei `.env` im Projektordner anlegen und den OpenAI‑Schlüssel hinterlegen:
+   ```
+   OPENAI_API_KEY=dein_api_key
+   ```
+4. Anschließend lässt sich das Skript wie unten beschrieben starten.
 
 ## Nutzung
 
