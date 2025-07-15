@@ -50,7 +50,11 @@ async function selectFeed() {
     try {
       const parser = new Parser();
       const feed = await parser.parseURL(url);
-      feeds.push({ url, title: feed.title || url });
+      let title = feed.title;
+      if (!title) {
+        title = (await prompt('Titel des Feeds: ')).trim() || url;
+      }
+      feeds.push({ url, title });
       saveFeeds();
     } catch (e) {
       console.error('❌ Feed konnte nicht geladen werden:', e.message);
@@ -68,7 +72,7 @@ async function fetchEpisodes(feedUrl) {
     pubDate: item.pubDate
   })).filter(e => e.url);
   episodes.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
-  return episodes;
+  return { episodes, title: feed.title };
 }
 
 async function downloadFile(url, dest) {
@@ -116,11 +120,22 @@ async function processEpisode(ep, baseDir) {
 
 (async () => {
   const feedUrl = await selectFeed();
-  const episodes = await fetchEpisodes(feedUrl); // already sorted by pubDate
+  const { episodes, title: parsedTitle } = await fetchEpisodes(feedUrl); // already sorted by pubDate
+  const feedObj = feeds.find(f => f.url === feedUrl);
+  let feedTitle = feedObj?.title || parsedTitle;
+  if (!feedTitle) {
+    feedTitle = (await prompt('Titel des Feeds: ')).trim() || feedUrl;
+  }
+  if (feedObj && !feedObj.title && feedTitle) {
+    feedObj.title = feedTitle;
+    saveFeeds();
+  }
+  const feedSlug = feedTitle.replace(/[^a-z0-9]+/gi, '_');
+  const baseDir = path.join(__dirname, 'podcasts', feedSlug);
+  fs.mkdirSync(baseDir, { recursive: true });
+
   const numStr = await prompt('Wieviele Episoden ab heute transkribieren? ');
   const num = parseInt(numStr, 10) || 1;
-  const baseDir = path.join(__dirname, 'podcasts');
-  fs.mkdirSync(baseDir, { recursive: true });
   const toProcess = episodes.slice(0, num);
   for (const ep of toProcess) {
     try { await processEpisode(ep, baseDir); }
