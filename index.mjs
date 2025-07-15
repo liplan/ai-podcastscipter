@@ -69,7 +69,9 @@ async function fetchEpisodes(feedUrl) {
   const episodes = feed.items.map(item => ({
     title: item.title,
     url: item.enclosure?.url,
-    pubDate: item.pubDate
+    pubDate: item.pubDate,
+    episodeNumber: item.itunes?.episode || item['itunes:episode'] || item.episode,
+    metadata: item
   })).filter(e => e.url);
   episodes.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
   return { episodes, title: feed.title };
@@ -87,9 +89,14 @@ async function downloadFile(url, dest) {
 }
 
 async function processEpisode(ep, baseDir) {
+  const epNum  = ep.episodeNumber ? String(ep.episodeNumber).padStart(3, '0') + '_' : '';
   const epSlug = ep.title.replace(/[^a-z0-9]+/gi, '_');
-  const epDir  = path.join(baseDir, epSlug);
+  const epDir  = path.join(baseDir, `${epNum}${epSlug}`);
   fs.mkdirSync(epDir, { recursive: true });
+  const metaPath = path.join(epDir, 'metadata.json');
+  if (ep.metadata) {
+    fs.writeFileSync(metaPath, JSON.stringify(ep.metadata, null, 2));
+  }
   const audioPath = path.join(epDir, `${epSlug}.mp3`);
 
   if (!fs.existsSync(audioPath)) {
