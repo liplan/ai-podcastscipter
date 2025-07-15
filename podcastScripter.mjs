@@ -56,11 +56,12 @@ async function transkribiere(mp3Pfad) {
   }
 
   const basename        = path.basename(mp3Pfad, path.extname(mp3Pfad));
-  const srtPfad         = path.join(__dirname, `${basename}.transcript.srt`);
-  const jsonPfad        = path.join(__dirname, `${basename}.transcript.json`);
-  const speakerTxtPfad  = path.join(__dirname, `${basename}.speakers.txt`);
-  const summaryPfad     = path.join(__dirname, `${basename}.summary.md`);
-  const markdownPfad    = path.join(__dirname, `${basename}.md`);
+  const targetDir       = path.dirname(mp3Pfad);
+  const srtPfad         = path.join(targetDir, `${basename}.transcript.srt`);
+  const jsonPfad        = path.join(targetDir, `${basename}.transcript.json`);
+  const speakerTxtPfad  = path.join(targetDir, `${basename}.speakers.txt`);
+  const summaryPfad     = path.join(targetDir, `${basename}.summary.md`);
+  const markdownPfad    = path.join(targetDir, `${basename}.md`);
 
   const maxSize = 25 * 1024 * 1024;
   const fileSize = fs.statSync(mp3Pfad).size;
