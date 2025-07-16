@@ -89,15 +89,16 @@ async function downloadFile(url, dest) {
 }
 
 async function processEpisode(ep, baseDir) {
-  const epNum  = ep.episodeNumber ? String(ep.episodeNumber).padStart(3, '0') + '_' : '';
-  const epSlug = ep.title.replace(/[^a-z0-9]+/gi, '_');
-  const epDir  = path.join(baseDir, `${epNum}${epSlug}`);
+  const epPrefix = ep.episodeNumber ? String(ep.episodeNumber).padStart(4, '0') + '_' : '';
+  const rawSlug  = ep.title.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+  const baseName = (epPrefix + rawSlug).slice(0, 32);
+  const epDir    = path.join(baseDir, baseName);
   fs.mkdirSync(epDir, { recursive: true });
   const metaPath = path.join(epDir, 'metadata.json');
   if (ep.metadata) {
     fs.writeFileSync(metaPath, JSON.stringify(ep.metadata, null, 2));
   }
-  const audioPath = path.join(epDir, `${epSlug}.mp3`);
+  const audioPath = path.join(epDir, `${baseName}.mp3`);
 
   if (!fs.existsSync(audioPath)) {
     console.log('⬇️  Lade herunter:', ep.title);
@@ -137,7 +138,7 @@ async function processEpisode(ep, baseDir) {
     feedObj.title = feedTitle;
     saveFeeds();
   }
-  const feedSlug = feedTitle.replace(/[^a-z0-9]+/gi, '_');
+  const feedSlug = feedTitle.toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 32);
   const baseDir = path.join(__dirname, 'podcasts', feedSlug);
   fs.mkdirSync(baseDir, { recursive: true });
 
