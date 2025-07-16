@@ -89,15 +89,20 @@ async function downloadFile(url, dest) {
 }
 
 async function processEpisode(ep, baseDir) {
-  const epNum  = ep.episodeNumber ? String(ep.episodeNumber).padStart(3, '0') + '_' : '';
-  const epSlug = ep.title.replace(/[^a-z0-9]+/gi, '_');
-  const epDir  = path.join(baseDir, `${epNum}${epSlug}`);
+  const epNum = String(ep.episodeNumber ?? 0).padStart(4, '0');
+  const slug  = ep.title.replace(/[^a-z0-9]+/gi, '_').replace(/^_|_$/g, '');
+
+  const dirName = `${epNum}_${slug}`.slice(0, 32);
+  const epDir   = path.join(baseDir, dirName);
   fs.mkdirSync(epDir, { recursive: true });
+
   const metaPath = path.join(epDir, 'metadata.json');
   if (ep.metadata) {
     fs.writeFileSync(metaPath, JSON.stringify(ep.metadata, null, 2));
   }
-  const audioPath = path.join(epDir, `${epSlug}.mp3`);
+
+  const fileBase  = `${epNum}_${slug}`.slice(0, 17); // ensure total filename <= 32
+  const audioPath = path.join(epDir, `${fileBase}.mp3`);
 
   if (!fs.existsSync(audioPath)) {
     console.log('⬇️  Lade herunter:', ep.title);

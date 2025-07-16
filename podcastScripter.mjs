@@ -55,7 +55,8 @@ async function transkribiere(mp3Pfad) {
     process.exit(1);
   }
 
-  const basename        = path.basename(mp3Pfad, path.extname(mp3Pfad));
+  const rawBase         = path.basename(mp3Pfad, path.extname(mp3Pfad));
+  const basename        = rawBase.slice(0, 17); // max length so that extensions stay <32
   const targetDir       = path.dirname(mp3Pfad);
   const srtPfad         = path.join(targetDir, `${basename}.transcript.srt`);
   const jsonPfad        = path.join(targetDir, `${basename}.transcript.json`);
