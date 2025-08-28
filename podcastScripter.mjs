@@ -21,6 +21,7 @@ import SRTParser from 'srt-parser-2';
 import ffmpegPath from 'ffmpeg-static';
 import dotenv from 'dotenv';
 import fetch from 'node-fetch';
+import { getAudioDurationInSeconds } from 'get-audio-duration';
 
 dotenv.config();
 
@@ -114,13 +115,16 @@ async function transkribiere(mp3Pfad) {
   const summaryPfad     = path.join(targetDir, `${basename}.summary.md`);
   const markdownPfad    = path.join(targetDir, `${basename}.md`);
 
-  const maxSize = 25 * 1024 * 1024;
+  const maxSize = 10 * 1024 * 1024;
   const fileSize = fs.statSync(mp3Pfad).size;
   console.log('📤  Transkribiere via Whisper …');
   let srtText = '';
 
   if (fileSize > maxSize) {
-    console.log('🔀  Datei größer 25MB → splitte in 10‑Minuten‑Teile');
+    const durationSec = await getAudioDurationInSeconds(mp3Pfad);
+    const bytesPerSecond = fileSize / durationSec;
+    const segmentTime = Math.max(1, Math.floor(maxSize / bytesPerSecond));
+    console.log(`🔀  Datei größer 10MB → splitte in ~${Math.ceil(segmentTime / 60)}‑Minuten‑Teile`);
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'podsplit-'));
     const pattern = path.join(tmpDir, `${basename}-%03d.mp3`);
     await new Promise((res, rej) => {
@@ -130,7 +134,7 @@ async function transkribiere(mp3Pfad) {
         '-loglevel', 'error',
         '-i', mp3Pfad,
         '-f', 'segment',
-        '-segment_time', '600',
+        '-segment_time', String(segmentTime),
         '-c', 'copy',
         pattern
       ];
