@@ -16,7 +16,7 @@ import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { spawn } from 'child_process';
-import { OpenAI } from 'openai';
+import { OpenAI, APIConnectionError } from 'openai';
 import SRTParser from 'srt-parser-2';
 import ffmpegPath from 'ffmpeg-static';
 import dotenv from 'dotenv';
@@ -32,8 +32,24 @@ if (!OPENAI_API_KEY) {
   process.exit(1);
 }
 
-const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
+const openai = new OpenAI({ apiKey: OPENAI_API_KEY, timeout: 60_000 });
 const parser = new SRTParser();
+
+async function retryRequest(fn, retries = 3, baseDelay = 1000) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (err instanceof APIConnectionError && attempt < retries) {
+        const wait = baseDelay * Math.pow(2, attempt);
+        console.warn(`⚠️  Netzwerkfehler, neuer Versuch in ${wait / 1000}s …`);
+        await new Promise(res => setTimeout(res, wait));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
 
 function parseTime(t) {
   const [h, m, sMs] = t.split(':');
@@ -90,12 +106,12 @@ async function transkribiere(mp3Pfad) {
     const allLines = [];
     let offset = 0;
     for (const p of parts) {
-      const resp = await openai.audio.transcriptions.create({
+      const resp = await retryRequest(() => openai.audio.transcriptions.create({
         file: fs.createReadStream(path.join(tmpDir, p)),
         model: 'whisper-1',
         response_format: 'srt',
         timestamp_granularities: ['segment'],
-      });
+      }));
       const segLines = parser.fromSrt(resp);
       for (const line of segLines) {
         line.startTime = formatTime(parseTime(line.startTime) + offset);
@@ -107,12 +123,12 @@ async function transkribiere(mp3Pfad) {
     srtText = parser.toSrt(allLines);
     fs.rmSync(tmpDir, { recursive: true, force: true });
   } else {
-    const whisperResp = await openai.audio.transcriptions.create({
+    const whisperResp = await retryRequest(() => openai.audio.transcriptions.create({
       file: fs.createReadStream(mp3Pfad),
       model: 'whisper-1',
       response_format: 'srt',
       timestamp_granularities: ['segment'],
-    });
+    }));
     srtText = whisperResp;
   }
 
@@ -135,13 +151,13 @@ Speaker 2: Gavin
 Nur die Namen und Reihenfolge. Falls „Kevin“ vorkommt, ist eigentlich „Gavin“ gemeint.`;
 
   console.log('🤖  Frage GPT-4 nach Sprechern …');
-  const speakerRes = await openai.chat.completions.create({
+  const speakerRes = await retryRequest(() => openai.chat.completions.create({
     model: 'gpt-4',
     messages: [
       { role: 'system', content: 'Du bist ein Assistent zur Sprechererkennung in Podcasts.' },
       { role: 'user',   content: gptSpeakerPrompt }
     ]
-  });
+  }));
 
   const gptSpeakerText = speakerRes.choices[0].message.content.trim();
   fs.writeFileSync(speakerTxtPfad, gptSpeakerText, 'utf-8');
@@ -198,13 +214,13 @@ ${summaryInput}
 Bullet-Points:`;
 
   console.log('\n📝  Erstelle GPT-4-Zusammenfassung …');
-  const summaryRes = await openai.chat.completions.create({
+  const summaryRes = await retryRequest(() => openai.chat.completions.create({
     model: 'gpt-4',
     messages: [
       { role: 'system', content: 'Du bist ein hilfreicher Redakteur.' },
       { role: 'user',   content: gptSummaryPrompt }
     ]
-  });
+  }));
 
   const summary = summaryRes.choices[0].message.content.trim();
   fs.writeFileSync(summaryPfad, summary, 'utf-8');
