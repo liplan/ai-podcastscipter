@@ -65,7 +65,21 @@ async function selectFeed() {
 
 async function fetchEpisodes(feedUrl) {
   const parser = new Parser();
-  const feed = await parser.parseURL(feedUrl);
+  let feed;
+  try {
+    feed = await parser.parseURL(feedUrl);
+  } catch (err) {
+    if (fs.existsSync(feedUrl)) {
+      try {
+        const xml = fs.readFileSync(feedUrl, 'utf-8');
+        feed = await parser.parseString(xml);
+      } catch (inner) {
+        throw new Error(`Feed konnte nicht geladen werden: ${inner.message}`);
+      }
+    } else {
+      throw new Error(`Feed konnte nicht geladen werden: ${err.message}`);
+    }
+  }
   const episodes = feed.items.map(item => ({
     title: item.title,
     url: item.enclosure?.url,
@@ -77,15 +91,27 @@ async function fetchEpisodes(feedUrl) {
   return { episodes, title: feed.title };
 }
 
-async function downloadFile(url, dest) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Download fehlgeschlagen: ${res.status}`);
-  const fileStream = fs.createWriteStream(dest);
-  await new Promise((resolve, reject) => {
-    res.body.pipe(fileStream);
-    res.body.on('error', reject);
-    fileStream.on('finish', resolve);
-  });
+async function downloadFile(url, dest, retries = 3) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+      const fileStream = fs.createWriteStream(dest);
+      await new Promise((resolve, reject) => {
+        res.body.pipe(fileStream);
+        res.body.on('error', reject);
+        fileStream.on('finish', resolve);
+      });
+      return;
+    } catch (err) {
+      if (attempt < retries) {
+        console.warn(`⚠️  Download fehlgeschlagen (Versuch ${attempt}/${retries}): ${err.message}`);
+        await new Promise(r => setTimeout(r, 1000 * attempt));
+      } else {
+        throw new Error(`Download von ${url} fehlgeschlagen: ${err.message}`);
+      }
+    }
+  }
 }
 
 async function processEpisode(ep, baseDir) {
@@ -128,7 +154,13 @@ async function processEpisode(ep, baseDir) {
 
 (async () => {
   const feedUrl = await selectFeed();
-  const { episodes, title: parsedTitle } = await fetchEpisodes(feedUrl); // already sorted by pubDate
+  let episodes, parsedTitle;
+  try {
+    ({ episodes, title: parsedTitle } = await fetchEpisodes(feedUrl)); // already sorted by pubDate
+  } catch (e) {
+    console.error('❌ Episoden konnten nicht geladen werden:', e.message);
+    process.exit(1);
+  }
   const feedObj = feeds.find(f => f.url === feedUrl);
   let feedTitle = feedObj?.title || parsedTitle;
   if (!feedTitle) {
