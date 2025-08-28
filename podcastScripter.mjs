@@ -22,6 +22,7 @@ import ffmpegPath from 'ffmpeg-static';
 import dotenv from 'dotenv';
 import fetch from 'node-fetch';
 import { getAudioDurationInSeconds } from 'get-audio-duration';
+import { logNetworkError } from './logger.mjs';
 
 dotenv.config();
 
@@ -59,6 +60,7 @@ async function checkOpenAIConnection() {
     }
     console.log('✅  Verbindung zu api.openai.com OK.');
   } catch (err) {
+    logNetworkError(err, 'checkOpenAIConnection');
     console.error('❌  Keine Verbindung zu api.openai.com.');
     console.error('    Prüfe Internetzugang, Firewall oder Proxy.');
     console.error('    Test: curl https://api.openai.com/v1/models');
@@ -71,6 +73,7 @@ async function retryRequest(fn, retries = 3, baseDelay = 1000) {
     try {
       return await fn();
     } catch (err) {
+      logNetworkError(err, 'OpenAI request');
       if (err instanceof APIConnectionError) {
         if (attempt < retries) {
           const wait = baseDelay * Math.pow(2, attempt);

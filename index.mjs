@@ -7,6 +7,7 @@ import Parser from 'rss-parser';
 import fetch from 'node-fetch';
 import { getAudioDurationInSeconds } from 'get-audio-duration';
 import { spawn } from 'child_process';
+import { logNetworkError } from './logger.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -57,6 +58,7 @@ async function selectFeed() {
       feeds.push({ url, title });
       saveFeeds();
     } catch (e) {
+      logNetworkError(e, `selectFeed ${url}`);
       console.error('❌ Feed konnte nicht geladen werden:', e.message);
     }
   }
@@ -69,11 +71,13 @@ async function fetchEpisodes(feedUrl) {
   try {
     feed = await parser.parseURL(feedUrl);
   } catch (err) {
+    logNetworkError(err, `fetchEpisodes ${feedUrl}`);
     if (fs.existsSync(feedUrl)) {
       try {
         const xml = fs.readFileSync(feedUrl, 'utf-8');
         feed = await parser.parseString(xml);
       } catch (inner) {
+        logNetworkError(inner, `fetchEpisodes parseString ${feedUrl}`);
         throw new Error(`Feed konnte nicht geladen werden: ${inner.message}`);
       }
     } else {
@@ -104,6 +108,7 @@ async function downloadFile(url, dest, retries = 3) {
       });
       return;
     } catch (err) {
+      logNetworkError(err, `downloadFile ${url}`);
       if (attempt < retries) {
         console.warn(`⚠️  Download fehlgeschlagen (Versuch ${attempt}/${retries}): ${err.message}`);
         await new Promise(r => setTimeout(r, 1000 * attempt));
