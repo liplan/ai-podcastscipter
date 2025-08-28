@@ -61,4 +61,5 @@ zusätzliche Korrekturen weiter.
 ### Netzwerkprobleme
 
 Schlägt das Laden eines RSS-Feeds oder das Herunterladen einer Audiodatei wegen eines Netzwerkfehlers fehl, meldet das Skript nun den exakten Grund. Falls kein Internetzugang möglich ist, kann als alternative Lösung auch der Pfad zu einer lokal gespeicherten RSS-Datei angegeben werden.
+Zusätzliche Details zu Verbindungsfehlern werden in der Datei `network-errors.log` im Projektordner protokolliert.
 
