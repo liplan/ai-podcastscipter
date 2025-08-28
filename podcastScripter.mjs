@@ -3,10 +3,10 @@
 /* -------------------------------------------------------------
  * Podcast-Transkription + Sprechererkennung + Zusammenfassung
  * -------------------------------------------------------------
- * 1. Whisper → SRT
- * 2. GPT-4 → Sprecher­Namen (inkl. Korrekturen aus name-fixes.json)
+ * 1. GPT-4o-mini-transcribe → SRT
+ * 2. GPT-4o → Sprecher­Namen (inkl. Korrekturen aus name-fixes.json)
  * 3. JSON-Export mit Speaker-Tags
- * 4. GPT-4 → Kurz­zusammenfassung (Markdown Bullet-Points)
+ * 4. GPT-4o → Kurz­zusammenfassung (Markdown Bullet-Points)
  * 5. Markdown-Datei mit Transkript und Zusammenfassung
  * -------------------------------------------------------------
  */
@@ -16,7 +16,7 @@ import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { spawn } from 'child_process';
-import { OpenAI, APIConnectionError } from 'openai';
+import OpenAI, { APIConnectionError } from 'openai';
 import SRTParser from 'srt-parser-2';
 import ffmpegPath from 'ffmpeg-static';
 import dotenv from 'dotenv';
@@ -35,7 +35,7 @@ if (!OPENAI_API_KEY) {
   process.exit(1);
 }
 
-// Whisper-Transkriptionen größerer Audiostücke können länger als eine Minute dauern.
+// Transkriptionen größerer Audiostücke können länger als eine Minute dauern.
 // Erhöhe daher das Request-Timeout auf zehn Minuten, um unnötige Abbrüche zu vermeiden.
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY, timeout: 600_000 });
 const parser = new SRTParser();
@@ -120,7 +120,7 @@ async function transkribiere(mp3Pfad) {
 
   const maxSize = 10 * 1024 * 1024;
   const fileSize = fs.statSync(mp3Pfad).size;
-  console.log('📤  Transkribiere via Whisper …');
+  console.log('📤  Transkribiere via GPT-4o-mini …');
   let srtText = '';
 
   if (fileSize > maxSize) {
@@ -150,7 +150,7 @@ async function transkribiere(mp3Pfad) {
     for (const p of parts) {
       const resp = await retryRequest(() => openai.audio.transcriptions.create({
         file: fs.createReadStream(path.join(tmpDir, p)),
-        model: 'whisper-1',
+        model: 'gpt-4o-mini-transcribe',
         response_format: 'srt',
         timestamp_granularities: ['segment'],
       }));
@@ -165,13 +165,13 @@ async function transkribiere(mp3Pfad) {
     srtText = parser.toSrt(allLines);
     fs.rmSync(tmpDir, { recursive: true, force: true });
   } else {
-    const whisperResp = await retryRequest(() => openai.audio.transcriptions.create({
+    const transcribeResp = await retryRequest(() => openai.audio.transcriptions.create({
       file: fs.createReadStream(mp3Pfad),
-      model: 'whisper-1',
+      model: 'gpt-4o-mini-transcribe',
       response_format: 'srt',
       timestamp_granularities: ['segment'],
     }));
-    srtText = whisperResp;
+    srtText = transcribeResp;
   }
 
   fs.writeFileSync(srtPfad, srtText, 'utf-8');
@@ -192,16 +192,16 @@ Speaker 2: Gavin
 
 Nur die Namen und Reihenfolge. Falls „Kevin“ vorkommt, ist eigentlich „Gavin“ gemeint.`;
 
-  console.log('🤖  Frage GPT-4 nach Sprechern …');
-  const speakerRes = await retryRequest(() => openai.chat.completions.create({
-    model: 'gpt-4',
-    messages: [
+  console.log('🤖  Frage GPT-4o nach Sprechern …');
+  const speakerRes = await retryRequest(() => openai.responses.create({
+    model: 'gpt-4o',
+    input: [
       { role: 'system', content: 'Du bist ein Assistent zur Sprechererkennung in Podcasts.' },
       { role: 'user',   content: gptSpeakerPrompt }
     ]
   }));
 
-  const gptSpeakerText = speakerRes.choices[0].message.content.trim();
+  const gptSpeakerText = speakerRes.output_text.trim();
   fs.writeFileSync(speakerTxtPfad, gptSpeakerText, 'utf-8');
   console.log('📄  GPT-Antwort gespeichert →', speakerTxtPfad);
 
@@ -255,16 +255,16 @@ ${summaryInput}
 -----
 Bullet-Points:`;
 
-  console.log('\n📝  Erstelle GPT-4-Zusammenfassung …');
-  const summaryRes = await retryRequest(() => openai.chat.completions.create({
-    model: 'gpt-4',
-    messages: [
+  console.log('\n📝  Erstelle GPT-4o-Zusammenfassung …');
+  const summaryRes = await retryRequest(() => openai.responses.create({
+    model: 'gpt-4o',
+    input: [
       { role: 'system', content: 'Du bist ein hilfreicher Redakteur.' },
       { role: 'user',   content: gptSummaryPrompt }
     ]
   }));
 
-  const summary = summaryRes.choices[0].message.content.trim();
+  const summary = summaryRes.output_text.trim();
   fs.writeFileSync(summaryPfad, summary, 'utf-8');
 
   console.log('✅  Zusammenfassung gespeichert →', summaryPfad);
@@ -275,7 +275,7 @@ Bullet-Points:`;
   const transcript = jsonOut.map(j =>
     `**[${j.start}] ${j.speaker}:** ${j.text}`).join('\n');
 
-  const summaryMd = `\n\n---\n\n## 🧠 Zusammenfassung (GPT-4)\n\n${summary}\n`;
+  const summaryMd = `\n\n---\n\n## 🧠 Zusammenfassung (GPT-4o)\n\n${summary}\n`;
 
   fs.writeFileSync(markdownPfad, header + transcript + summaryMd, 'utf-8');
   console.log('✅  Markdown-Datei gespeichert →', markdownPfad);
