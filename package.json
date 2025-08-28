@@ -2,19 +2,19 @@
   "name": "ai-podcast-transcriber",
   "version": "1.0.0",
   "type": "module",
-  "description": "Transkribiert Podcasts mit Whisper und erkennt Sprecher via GPT-4",
+  "description": "Transkribiert Podcasts mit GPT-4o und erkennt Sprecher automatisch",
   "main": "index.mjs",
   "scripts": {
     "start": "node index.mjs",
     "transcribe": "node podcastScripter.mjs"
   },
   "dependencies": {
-    "dotenv": "^16.4.5",
+    "dotenv": "^17.2.1",
     "ffmpeg-static": "^5.2.0",
     "get-audio-duration": "^4.0.1",
     "node-fetch": "^3.3.2",
-    "openai": "^4.28.4",
-    "rss-parser": "^3.12.0",
-    "srt-parser-2": "^1.2.0"
+    "openai": "^5.16.0",
+    "rss-parser": "^3.13.0",
+    "srt-parser-2": "^1.2.3"
   }
 }
