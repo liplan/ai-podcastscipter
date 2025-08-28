@@ -58,3 +58,7 @@ Beim Ausführen überprüft das Skript, ob diese Datei existiert und ersetzt
 gefundene Namen entsprechend. Fehlt die Datei, läuft der Prozess ohne
 zusätzliche Korrekturen weiter.
 
+### Netzwerkprobleme
+
+Schlägt das Laden eines RSS-Feeds oder das Herunterladen einer Audiodatei wegen eines Netzwerkfehlers fehl, meldet das Skript nun den exakten Grund. Falls kein Internetzugang möglich ist, kann als alternative Lösung auch der Pfad zu einer lokal gespeicherten RSS-Datei angegeben werden.
+
