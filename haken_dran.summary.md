@@ -1,7 +1,0 @@
-1. In dem Podcast geht es um verschiedene Aktualisierungen und Entwicklungen im Social-Media-Bereich, einschließlich der Standorte der Podcaster und Diskussionen über Elon Musk.
-2. Podcaster Dennis spielt ein Spiel mit den Hörern, bei dem sie seinen aktuellen Aufenthaltsort erraten müssen, basierend auf seinen Beschreibungen und Geräuschen im Hintergrund.
-3. Es wird über Elon Musk gesprochen, der sich offenbar gut mit Autokraten versteht, und seine jüngsten Treffen mit kontroversen Führungspersönlichkeiten wie Recep Tayyip Erdogan. 
-4. Sie diskutieren über Probleme bei Twitter (Im Podcast als "X" bezeichnet), die dazu führen, dass Benutzer Schwierigkeiten haben, Beiträge zu laden oder zu antworten - das bezeichnen sie als "Jenga-Time".
-5. Es gibt eine Diskussion über Apple CEO Tim Cook's kürzliches Interview, in dem er Fragen zu Antisemitismus auf Twitter und Apples Investments auf Twitter ausweicht.
-6. Die Podcaster tauschen sich über die jüngsten Designänderungen bei Twitter aus, insbesondere die Art und Weise, wie Werbung hervorgehoben und identifiziert wird.
-7. Schließlich diskutieren sie die jüngsten Ankündigungen von Telegram, dass sie die Blockchain-Technologie tiefer in den Dienst integrieren und ab November ein Wallet für Nutzer außerhalb der USA und einiger anderer Länder aktivieren wollen.

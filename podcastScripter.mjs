@@ -3,7 +3,7 @@
 /* -------------------------------------------------------------
  * Podcast-Transkription + Sprechererkennung + Zusammenfassung
  * -------------------------------------------------------------
- * 1. GPT-4o-mini-transcribe → SRT
+ * 1. GPT-4o-mini-transcribe → JSON → SRT
  * 2. GPT-4o → Sprecher­Namen (inkl. Korrekturen aus name-fixes.json)
  * 3. JSON-Export mit Speaker-Tags
  * 4. GPT-4o → Kurz­zusammenfassung (Markdown Bullet-Points)
@@ -16,11 +16,11 @@ import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { spawn } from 'child_process';
-import OpenAI, { APIConnectionError } from 'openai';
+import OpenAI, { APIConnectionError, APIError } from 'openai';
 import SRTParser from 'srt-parser-2';
 import ffmpegPath from 'ffmpeg-static';
 import dotenv from 'dotenv';
-import fetch from 'node-fetch';
+import { fetch as undiciFetch, ProxyAgent, Agent, setGlobalDispatcher } from 'undici';
 import { getAudioDurationInSeconds } from 'get-audio-duration';
 import { logNetworkError } from './logger.mjs';
 
@@ -35,21 +35,76 @@ if (!OPENAI_API_KEY) {
   process.exit(1);
 }
 
-// Transkriptionen größerer Audiostücke können länger als eine Minute dauern.
-// Erhöhe daher das Request-Timeout auf zehn Minuten, um unnötige Abbrüche zu vermeiden.
-const openai = new OpenAI({ apiKey: OPENAI_API_KEY, timeout: 600_000 });
+/* === Einheitlicher HTTP-Stack via undici (mit Proxy-Unterstützung) === */
+function buildDispatcher() {
+  const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
+  if (proxyUrl) return new ProxyAgent(proxyUrl);
+  return new Agent({ keepAliveTimeout: 10_000, keepAliveMaxTimeout: 60_000 });
+}
+const dispatcher = buildDispatcher();
+setGlobalDispatcher(dispatcher);
+
+/* OpenAI-Client (Timeout großzügig für lange Audios) */
+const openai = new OpenAI({
+  apiKey: OPENAI_API_KEY,
+  timeout: 600_000,
+});
+
+/* Parser nur fürs spätere Einlesen der erzeugten SRT */
 const parser = new SRTParser();
 
+/* ---------- Utilities ---------- */
+
+function formatTime(secFloat) {
+  const sec = Math.max(0, Number(secFloat) || 0);
+  const h  = Math.floor(sec / 3600);
+  const m  = Math.floor((sec % 3600) / 60);
+  const s  = Math.floor(sec % 60);
+  const ms = Math.round((sec - Math.floor(sec)) * 1000);
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(ms).padStart(3, '0')}`;
+}
+
+/** Baut aus Transkript-Segmenten eine SRT-Zeichenkette (mit optionalem Offset in Sekunden). */
+function segmentsToSrt(segments, offsetSec = 0) {
+  if (!Array.isArray(segments) || segments.length === 0) {
+    throw new Error('Transkript-JSON enthält keine segments – SRT kann nicht erzeugt werden.');
+  }
+  return segments.map((seg, i) => {
+    const start = formatTime((seg.start ?? 0) + offsetSec);
+    const end   = formatTime((seg.end   ?? 0) + offsetSec);
+    const text  = String(seg.text ?? '').trim();
+    return `${i + 1}\n${start} --> ${end}\n${text}\n`;
+  }).join('\n');
+}
+
+/** Sichert, dass wir nutzbare Segmente haben; baut notfalls einen Ein-Segment-Fallback. */
+function ensureSegments(resp, fallbackDurationSec) {
+  let segments = resp?.segments || resp?.output?.segments || resp?.results?.segments;
+  if (Array.isArray(segments) && segments.length > 0) return segments;
+
+  const text = String(resp?.text ?? '').trim();
+  if (!text) throw new Error('Transkript-JSON enthält weder segments noch text.');
+
+  const dur = Math.max(0, Number(fallbackDurationSec) || 0);
+  const end = dur > 0 ? dur : Math.max(Number(resp?.duration) || 0, 0);
+
+  return [{ id: 0, start: 0, end, text }];
+}
+
+/* ---------- Netzwerk-Reachability ---------- */
 async function checkOpenAIConnection() {
   console.log('🔌  Prüfe Verbindung zu api.openai.com …');
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5_000);
-    const res = await fetch('https://api.openai.com/v1/models', {
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
+    const res = await undiciFetch('https://api.openai.com/v1/models', {
       headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
-      signal: controller.signal
+      dispatcher,
+      signal: controller.signal,
     });
     clearTimeout(timeout);
+
     if (!res.ok) {
       console.error(`⚠️  OpenAI API erreichbar, aber Antwort ${res.status}.`);
       if (res.status === 401) {
@@ -62,47 +117,54 @@ async function checkOpenAIConnection() {
   } catch (err) {
     logNetworkError(err, 'checkOpenAIConnection');
     console.error('❌  Keine Verbindung zu api.openai.com.');
-    console.error('    Prüfe Internetzugang, Firewall oder Proxy.');
+    console.error('    Prüfe Internet/Firewall/Proxy (HTTPS_PROXY/HTTP_PROXY, NODE_EXTRA_CA_CERTS).');
     console.error('    Test: curl https://api.openai.com/v1/models');
     process.exit(1);
   }
 }
 
+/* ---------- Retry-Wrapper ---------- */
 async function retryRequest(fn, retries = 3, baseDelay = 1000) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       return await fn();
     } catch (err) {
-      logNetworkError(err, 'OpenAI request');
-      if (err instanceof APIConnectionError) {
-        if (attempt < retries) {
-          const wait = baseDelay * Math.pow(2, attempt);
-          console.warn(`⚠️  Netzwerkfehler, neuer Versuch in ${wait / 1000}s …`);
-          await new Promise(res => setTimeout(res, wait));
-          continue;
-        } else {
-          console.error('❌  Verbindung zur OpenAI API fehlgeschlagen.');
-          console.error('    Prüfe Netzwerk/Firewall/Proxy oder teste: curl https://api.openai.com/v1/models');
+      if (err instanceof APIError) {
+        console.error(`🔎 APIError status=${err.status} type=${err.type} message=${err.message}`);
+        if (err.response) {
+          try { console.error('↪ body:', await err.response.text()); } catch {}
         }
+      }
+
+      logNetworkError(err, 'OpenAI request');
+      const isConn = err instanceof APIConnectionError;
+      const isAPI  = err instanceof APIError && (err.status >= 500 || err.status === 429);
+
+      if ((isConn || isAPI) && attempt < retries) {
+        // Retry-After respektieren
+        let wait = baseDelay * Math.pow(2, attempt);
+        if (err instanceof APIError && err.response) {
+          const ra = err.response.headers.get('retry-after');
+          if (ra) {
+            const ms = Number(ra) * 1000;
+            if (!Number.isNaN(ms) && ms > 0) wait = ms;
+          }
+        }
+        wait += Math.floor(Math.random() * 250); // Jitter
+        console.warn(`⚠️  ${isConn ? 'Netzwerkfehler' : `HTTP ${err.status}`} – Retry in ${Math.round(wait/1000)}s …`);
+        await new Promise(r => setTimeout(r, wait));
+        continue;
+      }
+      if (isConn) {
+        console.error('❌  Verbindung zur OpenAI API fehlgeschlagen.');
+        console.error('    Prüfe Proxy/CA: HTTPS_PROXY/HTTP_PROXY, NODE_EXTRA_CA_CERTS, SSL_CERT_FILE.');
       }
       throw err;
     }
   }
 }
 
-function parseTime(t) {
-  const [h, m, sMs] = t.split(':');
-  const [s, ms] = sMs.split(',');
-  return (+h) * 3600 + (+m) * 60 + (+s) + (+ms) / 1000;
-}
-
-function formatTime(sec) {
-  const h  = Math.floor(sec / 3600);
-  const m  = Math.floor((sec % 3600) / 60);
-  const s  = Math.floor(sec % 60);
-  const ms = Math.round((sec - Math.floor(sec)) * 1000);
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(ms).padStart(3, '0')}`;
-}
+/* ---------- Hauptlogik ---------- */
 
 async function transkribiere(mp3Pfad) {
   if (!fs.existsSync(mp3Pfad)) {
@@ -118,23 +180,24 @@ async function transkribiere(mp3Pfad) {
   const summaryPfad     = path.join(targetDir, `${basename}.summary.md`);
   const markdownPfad    = path.join(targetDir, `${basename}.md`);
 
-  const maxSize = 10 * 1024 * 1024;
+  const maxSize  = 10 * 1024 * 1024;
   const fileSize = fs.statSync(mp3Pfad).size;
-  console.log('📤  Transkribiere via GPT-4o-mini …');
+  console.log('📤  Transkribiere via GPT-4o-mini (JSON → SRT) …');
+
   let srtText = '';
 
   if (fileSize > maxSize) {
     const durationSec = await getAudioDurationInSeconds(mp3Pfad);
     const bytesPerSecond = fileSize / durationSec;
-    const segmentTime = Math.max(1, Math.floor(maxSize / bytesPerSecond));
-    console.log(`🔀  Datei größer 10MB → splitte in ~${Math.ceil(segmentTime / 60)}‑Minuten‑Teile`);
+    const segmentTime = Math.max(60, Math.floor(maxSize / bytesPerSecond)); // mind. 60s
+    console.log(`🔀  Datei größer 10MB → splitte in ~${Math.ceil(segmentTime / 60)}-Minuten-Teile`);
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'podsplit-'));
     const pattern = path.join(tmpDir, `${basename}-%03d.mp3`);
+
+    // ffmpeg: Segmentieren (ohne Neucodierung)
     await new Promise((res, rej) => {
       const ffArgs = [
-        '-hide_banner',
-        '-nostdin',
-        '-loglevel', 'error',
+        '-hide_banner', '-nostdin', '-loglevel', 'error',
         '-i', mp3Pfad,
         '-f', 'segment',
         '-segment_time', String(segmentTime),
@@ -144,39 +207,51 @@ async function transkribiere(mp3Pfad) {
       const child = spawn(ffmpegPath, ffArgs, { stdio: 'ignore' });
       child.on('exit', c => c === 0 ? res() : rej(new Error('ffmpeg split failed')));
     });
+
     const parts = fs.readdirSync(tmpDir).filter(f => f.endsWith('.mp3')).sort();
-    const allLines = [];
+    const srtChunks = [];
     let offset = 0;
+
     for (const p of parts) {
+      const fullPath = path.join(tmpDir, p);
       const resp = await retryRequest(() => openai.audio.transcriptions.create({
-        file: fs.createReadStream(path.join(tmpDir, p)),
+        file: fs.createReadStream(fullPath),
         model: 'gpt-4o-mini-transcribe',
-        response_format: 'srt',
-        timestamp_granularities: ['segment'],
+        response_format: 'json',
+        timestamp_granularities: ['segment']   // <-- Segmente anfordern
       }));
-      const segLines = parser.fromSrt(resp);
-      for (const line of segLines) {
-        line.startTime = formatTime(parseTime(line.startTime) + offset);
-        line.endTime   = formatTime(parseTime(line.endTime) + offset);
-      }
-      if (segLines.length) offset = parseTime(segLines[segLines.length - 1].endTime);
-      allLines.push(...segLines);
+
+      // Segmente sicherstellen (Fallback: Ein-Segment mit Länge segmentTime)
+      const partSegments = ensureSegments(resp, segmentTime);
+      const srtPart = segmentsToSrt(partSegments, offset);
+      srtChunks.push(srtPart);
+
+      // Offset mit letztem Segment-Ende erhöhen
+      const last = partSegments[partSegments.length - 1];
+      offset = (last?.end ?? offset);
     }
-    srtText = parser.toSrt(allLines);
+
+    srtText = srtChunks.join('\n');
     fs.rmSync(tmpDir, { recursive: true, force: true });
+
   } else {
     const transcribeResp = await retryRequest(() => openai.audio.transcriptions.create({
       file: fs.createReadStream(mp3Pfad),
       model: 'gpt-4o-mini-transcribe',
-      response_format: 'srt',
-      timestamp_granularities: ['segment'],
+      response_format: 'json',
+      timestamp_granularities: ['segment']   // <-- Segmente anfordern
     }));
-    srtText = transcribeResp;
+
+    // Gesamtdauer als Fallback (für Einzelblock)
+    const totalDurationSec = await getAudioDurationInSeconds(mp3Pfad);
+    const segments = ensureSegments(transcribeResp, totalDurationSec);
+    srtText = segmentsToSrt(segments, 0);
   }
 
   fs.writeFileSync(srtPfad, srtText, 'utf-8');
   console.log('✅  SRT gespeichert →', srtPfad);
 
+  // Für Folge-Logik weiterhin SRT → JSON (einfaches Objekt pro Zeile)
   const srtJson = parser.fromSrt(srtText);
 
   const sampleLines = srtJson.slice(0, 6).map(e => e.text).join('\n');
@@ -195,17 +270,15 @@ Nur die Namen und Reihenfolge. Falls „Kevin“ vorkommt, ist eigentlich „Gav
   console.log('🤖  Frage GPT-4o nach Sprechern …');
   const speakerRes = await retryRequest(() => openai.responses.create({
     model: 'gpt-4o',
-    input: [
-      { role: 'system', content: 'Du bist ein Assistent zur Sprechererkennung in Podcasts.' },
-      { role: 'user',   content: gptSpeakerPrompt }
-    ]
+    instructions: 'Du bist ein Assistent zur Sprechererkennung in Podcasts.',
+    input: gptSpeakerPrompt
   }));
 
   const gptSpeakerText = speakerRes.output_text.trim();
   fs.writeFileSync(speakerTxtPfad, gptSpeakerText, 'utf-8');
   console.log('📄  GPT-Antwort gespeichert →', speakerTxtPfad);
 
-  const matchNames = [...gptSpeakerText.matchAll(/Speaker\s*(\d):\s*(\w+)/gi)];
+  const matchNames = [...gptSpeakerText.matchAll(/Speaker\s*(\d):\s*([\p{L}\-']+)/giu)];
   let nameMap = new Map(matchNames.map(([ , id, name ]) => [`Speaker ${id}`, name]));
 
   const fixPfad = path.join(__dirname, 'name-fixes.json');
@@ -258,10 +331,8 @@ Bullet-Points:`;
   console.log('\n📝  Erstelle GPT-4o-Zusammenfassung …');
   const summaryRes = await retryRequest(() => openai.responses.create({
     model: 'gpt-4o',
-    input: [
-      { role: 'system', content: 'Du bist ein hilfreicher Redakteur.' },
-      { role: 'user',   content: gptSummaryPrompt }
-    ]
+    instructions: 'Du bist ein hilfreicher Redakteur.',
+    input: gptSummaryPrompt
   }));
 
   const summary = summaryRes.output_text.trim();
@@ -280,6 +351,8 @@ Bullet-Points:`;
   fs.writeFileSync(markdownPfad, header + transcript + summaryMd, 'utf-8');
   console.log('✅  Markdown-Datei gespeichert →', markdownPfad);
 }
+
+/* ---------- CLI ---------- */
 
 const mp3File = process.argv[2];
 if (!mp3File) {

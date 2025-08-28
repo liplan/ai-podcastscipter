@@ -12,9 +12,9 @@
     "dotenv": "^17.2.1",
     "ffmpeg-static": "^5.2.0",
     "get-audio-duration": "^4.0.1",
-    "node-fetch": "^3.3.2",
     "openai": "^5.16.0",
     "rss-parser": "^3.13.0",
-    "srt-parser-2": "^1.2.3"
+    "srt-parser-2": "^1.2.3",
+    "undici": "^7.15.0"
   }
 }
