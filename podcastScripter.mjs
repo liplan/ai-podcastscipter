@@ -33,7 +33,9 @@ if (!OPENAI_API_KEY) {
   process.exit(1);
 }
 
-const openai = new OpenAI({ apiKey: OPENAI_API_KEY, timeout: 60_000 });
+// Whisper-Transkriptionen größerer Audiostücke können länger als eine Minute dauern.
+// Erhöhe daher das Request-Timeout auf zehn Minuten, um unnötige Abbrüche zu vermeiden.
+const openai = new OpenAI({ apiKey: OPENAI_API_KEY, timeout: 600_000 });
 const parser = new SRTParser();
 
 async function checkOpenAIConnection() {
