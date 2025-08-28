@@ -20,6 +20,7 @@ import { OpenAI, APIConnectionError } from 'openai';
 import SRTParser from 'srt-parser-2';
 import ffmpegPath from 'ffmpeg-static';
 import dotenv from 'dotenv';
+import fetch from 'node-fetch';
 
 dotenv.config();
 
@@ -35,16 +36,48 @@ if (!OPENAI_API_KEY) {
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY, timeout: 60_000 });
 const parser = new SRTParser();
 
+async function checkOpenAIConnection() {
+  console.log('🔌  Prüfe Verbindung zu api.openai.com …');
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5_000);
+    const res = await fetch('https://api.openai.com/v1/models', {
+      headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    if (!res.ok) {
+      console.error(`⚠️  OpenAI API erreichbar, aber Antwort ${res.status}.`);
+      if (res.status === 401) {
+        console.error('    Dein API-Key ist ungültig oder besitzt keine Berechtigung.');
+      }
+      console.error('    Test: curl https://api.openai.com/v1/models');
+      process.exit(1);
+    }
+    console.log('✅  Verbindung zu api.openai.com OK.');
+  } catch (err) {
+    console.error('❌  Keine Verbindung zu api.openai.com.');
+    console.error('    Prüfe Internetzugang, Firewall oder Proxy.');
+    console.error('    Test: curl https://api.openai.com/v1/models');
+    process.exit(1);
+  }
+}
+
 async function retryRequest(fn, retries = 3, baseDelay = 1000) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       return await fn();
     } catch (err) {
-      if (err instanceof APIConnectionError && attempt < retries) {
-        const wait = baseDelay * Math.pow(2, attempt);
-        console.warn(`⚠️  Netzwerkfehler, neuer Versuch in ${wait / 1000}s …`);
-        await new Promise(res => setTimeout(res, wait));
-        continue;
+      if (err instanceof APIConnectionError) {
+        if (attempt < retries) {
+          const wait = baseDelay * Math.pow(2, attempt);
+          console.warn(`⚠️  Netzwerkfehler, neuer Versuch in ${wait / 1000}s …`);
+          await new Promise(res => setTimeout(res, wait));
+          continue;
+        } else {
+          console.error('❌  Verbindung zur OpenAI API fehlgeschlagen.');
+          console.error('    Prüfe Netzwerk/Firewall/Proxy oder teste: curl https://api.openai.com/v1/models');
+        }
       }
       throw err;
     }
@@ -245,6 +278,9 @@ if (!mp3File) {
   process.exit(1);
 }
 
-transkribiere(mp3File).catch(err => {
+try {
+  await checkOpenAIConnection();
+  await transkribiere(mp3File);
+} catch (err) {
   console.error('❌  Fehler:', err);
-});
+}
