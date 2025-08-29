@@ -26,12 +26,13 @@ Die Methode eignet sich perspektivisch auch zur automatisierten Verarbeitung gan
 ### Aufruf mit Parametern
 
 ```bash
-node index.mjs <feed> <count> [--resume]
+node index.mjs <feed> <count> [--resume] [--force]
 ```
 
 * `<feed>` kann eine RSS-URL sein oder die Nummer eines bereits gespeicherten Eintrags aus `feeds.json`.
 * `<count>` gibt an, wie viele der neuesten Episoden verarbeitet werden sollen (Standard: 1).
 * `--resume` überspringt bereits verarbeitete Episoden gemäß `processed.json`.
+* `--force` verarbeitet ausgewählte Episoden erneut und überschreibt vorhandene Dateien ohne Rückfragen.
 
 Im Parameter- bzw. **Letzte-Episoden-Modus** läuft die Verarbeitung ohne weitere Rückfragen. Zwischenformate werden automatisch gelöscht und am Ende wird eine Kostensumme ausgegeben.
 
@@ -41,6 +42,7 @@ Zusätzliche Schalter steuern das Verhalten nach der Transkription:
 
 * `--keep-audio` – behält die heruntergeladene MP3-Datei (kein Löschdialog).
 * `--delete-temp` – löscht Zwischenformate wie SRT und JSON nach der Transkription.
+* `--force` – unterdrückt alle Rückfragen und überschreibt bestehende Dateien.
 
 Im interaktiven Modus fragt das Skript ohne `--keep-audio` nach erfolgreicher Verarbeitung, ob die Audiodatei entfernt werden soll. Im Parameter-Modus entfällt diese Nachfrage und die Datei wird bei Bedarf direkt gelöscht.
 
