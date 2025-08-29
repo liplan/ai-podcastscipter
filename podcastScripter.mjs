@@ -23,7 +23,6 @@ import dotenv from 'dotenv';
 import { fetch as undiciFetch, ProxyAgent, Agent, setGlobalDispatcher } from 'undici';
 import { getAudioDurationInSeconds } from 'get-audio-duration';
 import { logNetworkError } from './logger.mjs';
-import readline from 'readline';
 
 dotenv.config();
 
@@ -444,13 +443,6 @@ for (const file of cliArgs) {
 
 const estCost = totalMin * PRICE_PER_MINUTE;
 console.log(`💰  Geschätzte Kosten: ~$${estCost.toFixed(2)} (bei ${PRICE_PER_MINUTE}$/Min)`);
-
-const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-const proceed = await new Promise(res => rl.question('Fortfahren? (y/N) ', ans => { rl.close(); res(/^y(es)?$/i.test(ans)); }));
-if (!proceed) {
-  console.log('Abgebrochen.');
-  process.exit(0);
-}
 
 try {
   await checkOpenAIConnection();

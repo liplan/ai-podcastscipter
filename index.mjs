@@ -15,7 +15,7 @@ const __dirname = path.dirname(__filename);
 // CLI-Optionen
 const argv = process.argv.slice(2).filter(a => a.startsWith('--'));
 const KEEP_AUDIO = argv.includes('--keep-audio');
-const KEEP_TEMP  = argv.includes('--keep-temp') || argv.includes('--keep-intermediate');
+const DELETE_TEMP = argv.includes('--delete-temp') || argv.includes('--delete-intermediate');
 
 const feedsPath = path.join(__dirname, 'feeds.json');
 let feeds = [];
@@ -210,16 +210,13 @@ async function processEpisode(ep, baseDir) {
     }
   }
 
-  if (!KEEP_TEMP) {
-    const delTmp = await prompt('Zwischenformate (SRT/JSON) löschen? (j/N) ');
-    if (/^j/i.test(delTmp)) {
-      const base = path.basename(audioPath, '.mp3');
-      const srt = path.join(epDir, `${base}.transcript.srt`);
-      const json = path.join(epDir, `${base}.transcript.json`);
-      for (const p of [srt, json]) {
-        if (fs.existsSync(p)) {
-          try { fs.unlinkSync(p); } catch {}
-        }
+  if (DELETE_TEMP) {
+    const base = path.basename(audioPath, '.mp3');
+    const srt = path.join(epDir, `${base}.transcript.srt`);
+    const json = path.join(epDir, `${base}.transcript.json`);
+    for (const p of [srt, json]) {
+      if (fs.existsSync(p)) {
+        try { fs.unlinkSync(p); } catch {}
       }
     }
   }
