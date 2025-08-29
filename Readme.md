@@ -26,11 +26,12 @@ Die Methode eignet sich perspektivisch auch zur automatisierten Verarbeitung gan
 ### Aufruf mit Parametern
 
 ```bash
-node index.mjs <feed> <count>
+node index.mjs <feed> <count> [--resume]
 ```
 
 * `<feed>` kann eine RSS-URL sein oder die Nummer eines bereits gespeicherten Eintrags aus `feeds.json`.
 * `<count>` gibt an, wie viele der neuesten Episoden verarbeitet werden sollen (Standard: 1).
+* `--resume` überspringt bereits verarbeitete Episoden gemäß `processed.json`.
 
 ### Interaktiver Modus
 
@@ -43,6 +44,8 @@ Alle erzeugten Dateien landen unter `podcasts/<Podcastname>/`. Für jeden Feed w
 Nach der Transkription wird die Kurz­zusammenfassung außerdem automatisch als MP3 (`<basename>.summary.mp3`) mit einer Standardstimme erzeugt.
 
 `feeds.json` wird im Projektordner gespeichert und speichert alle jemals eingegebenen Feed-URLs samt Titel. Beim nächsten Start können vorhandene Feeds einfach über ihre Nummer ausgewählt werden.
+
+Der Fortschritt jeder Transkription wird in `processed.json` gesichert. Mit der Option `--resume` lässt sich eine Sitzung später fortsetzen, ohne bereits verarbeitete Episoden erneut zu bearbeiten.
 
 ### Korrektur erkannter Namen (`name-fixes.json`)
 
