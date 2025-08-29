@@ -61,11 +61,17 @@ let rateLimitDelay = 1000;
 
 function formatTime(secFloat) {
   const sec = Math.max(0, Number(secFloat) || 0);
-  const h  = Math.floor(sec / 3600);
-  const m  = Math.floor((sec % 3600) / 60);
-  const s  = Math.floor(sec % 60);
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = Math.floor(sec % 60);
   const ms = Math.round((sec - Math.floor(sec)) * 1000);
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(ms).padStart(3, '0')}`;
+
+  const hh = String(h).padStart(2, '0');
+  const mm = String(m).padStart(2, '0');
+  const ss = String(s).padStart(2, '0');
+  const msec = String(ms).padStart(3, '0');
+
+  return `${hh}:${mm}:${ss},${msec}`;
 }
 
 /** Baut aus Transkript-Segmenten eine SRT-Zeichenkette (mit optionalem Offset in Sekunden). */
