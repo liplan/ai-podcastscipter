@@ -7,7 +7,7 @@ import Parser from 'rss-parser';
 import fetch from 'node-fetch';
 import { getAudioDurationInSeconds } from 'get-audio-duration';
 import { spawn } from 'child_process';
-import { handleNetworkError, describeNetworkError } from './logger.mjs';
+import { handleNetworkError, describeNetworkError, logError } from './logger.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,6 +24,17 @@ feeds = Array.isArray(feeds) ? feeds.map(f => {
   return f;
 }).filter(Boolean) : [];
 if (saveNeeded) saveFeeds();
+
+const processedPath = path.join(__dirname, 'processed.json');
+let processed = {};
+if (fs.existsSync(processedPath)) {
+  try { processed = JSON.parse(fs.readFileSync(processedPath, 'utf-8')); }
+  catch (e) { logError(e, 'load processed.json'); }
+}
+function saveProcessed() {
+  try { fs.writeFileSync(processedPath, JSON.stringify(processed, null, 2)); }
+  catch (e) { logError(e, 'save processed.json'); }
+}
 
 function saveFeeds() {
   fs.writeFileSync(feedsPath, JSON.stringify(feeds, null, 2));
@@ -120,9 +131,7 @@ async function downloadFile(url, dest, retries = 3) {
 }
 
 async function processEpisode(ep, baseDir) {
-  const epPrefix = ep.episodeNumber ? String(ep.episodeNumber).padStart(4, '0') + '_' : '';
-  const rawSlug  = ep.title.toLowerCase().replace(/[^a-z0-9]+/g, '_');
-  const baseName = (epPrefix + rawSlug).slice(0, 32);
+  const baseName = episodeBaseName(ep);
   const epDir    = path.join(baseDir, baseName);
   fs.mkdirSync(epDir, { recursive: true });
   const metaPath = path.join(epDir, 'metadata.json');
@@ -157,7 +166,14 @@ async function processEpisode(ep, baseDir) {
   });
 }
 
+function episodeBaseName(ep) {
+  const epPrefix = ep.episodeNumber ? String(ep.episodeNumber).padStart(4, '0') + '_' : '';
+  const rawSlug  = ep.title.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+  return (epPrefix + rawSlug).slice(0, 32);
+}
+
 (async () => {
+  const resume = process.argv.includes('--resume');
   const feedUrl = await selectFeed();
   let episodes, parsedTitle;
   try {
@@ -202,7 +218,27 @@ async function processEpisode(ep, baseDir) {
   }
 
   for (const ep of toProcess) {
-    try { await processEpisode(ep, baseDir); }
-    catch (e) { console.error('❌', e.message); }
+    const baseName = episodeBaseName(ep);
+    const processedList = processed[feedSlug] || [];
+    if (processedList.includes(baseName)) {
+      if (resume) {
+        console.log(`⏭️  Überspringe bereits verarbeitete Episode: ${ep.title}`);
+        continue;
+      }
+      const again = await prompt(`Episode "${ep.title}" bereits verarbeitet. Erneut bearbeiten? (j/N) `);
+      if (!/^j/i.test(again)) {
+        console.log('⏭️  Übersprungen.');
+        continue;
+      }
+    }
+    try {
+      await processEpisode(ep, baseDir);
+      processed[feedSlug] = processedList;
+      if (!processedList.includes(baseName)) processedList.push(baseName);
+      saveProcessed();
+    } catch (e) {
+      logError(e, `processEpisode ${ep.title}`);
+      console.error('❌', e.message);
+    }
   }
 })();
