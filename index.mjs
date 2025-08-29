@@ -18,6 +18,7 @@ const optionArgs  = allArgs.filter(a => a.startsWith('--'));
 const positional  = allArgs.filter(a => !a.startsWith('--'));
 const KEEP_AUDIO  = optionArgs.includes('--keep-audio');
 let DELETE_TEMP   = optionArgs.includes('--delete-temp') || optionArgs.includes('--delete-intermediate');
+const FORCE       = optionArgs.includes('--force');
 const LATEST_MODE = positional.length > 0;
 if (LATEST_MODE) DELETE_TEMP = true; // Zwischenformate im Batch-Modus immer löschen
 
@@ -172,7 +173,7 @@ async function downloadFile(url, dest, retries = 3) {
   }
 }
 
-async function processEpisode(ep, baseDir, { noPrompt = false } = {}) {
+async function processEpisode(ep, baseDir, { noPrompt = false, force = false } = {}) {
   const baseName = episodeBaseName(ep);
   const epDir    = path.join(baseDir, baseName);
   fs.mkdirSync(epDir, { recursive: true });
@@ -182,8 +183,9 @@ async function processEpisode(ep, baseDir, { noPrompt = false } = {}) {
   }
   const audioPath = path.join(epDir, `${baseName}.mp3`);
 
-  if (!fs.existsSync(audioPath)) {
-    console.log('⬇️  Lade herunter:', ep.title);
+  if (!fs.existsSync(audioPath) || force) {
+    const action = fs.existsSync(audioPath) ? '⬇️  Überschreibe:' : '⬇️  Lade herunter:';
+    console.log(action, ep.title);
     await downloadFile(ep.url, audioPath);
   } else if (!noPrompt) {
     const overwrite = await prompt(`Datei für "${ep.title}" existiert. Überschreiben? (j/N) `);
@@ -198,9 +200,14 @@ async function processEpisode(ep, baseDir, { noPrompt = false } = {}) {
 
   const transcriptPath = path.join(epDir, `${path.basename(audioPath, '.mp3')}.md`);
   if (fs.existsSync(transcriptPath)) {
-    if (noPrompt) return 0; // skip silently
-    const reuse = await prompt('Transkript bereits vorhanden. Überspringen? (J/n) ');
-    if (!/^n/i.test(reuse)) return 0; // skip
+    if (force) {
+      // continue and overwrite existing transcript
+    } else if (noPrompt) {
+      return 0; // skip silently
+    } else {
+      const reuse = await prompt('Transkript bereits vorhanden. Überspringen? (J/n) ');
+      if (!/^n/i.test(reuse)) return 0; // skip
+    }
   }
 
   await new Promise((resolve, reject) => {
@@ -308,7 +315,7 @@ function episodeBaseName(ep) {
   for (const ep of toProcess) {
     const baseName = episodeBaseName(ep);
     const processedList = processed[feedSlug] || [];
-    if (processedList.includes(baseName)) {
+    if (processedList.includes(baseName) && !FORCE) {
       if (resume) {
         console.log(`⏭️  Überspringe bereits verarbeitete Episode: ${ep.title}`);
         continue;
@@ -325,7 +332,7 @@ function episodeBaseName(ep) {
       }
     }
     try {
-      const cost = await processEpisode(ep, baseDir, { noPrompt: LATEST_MODE });
+      const cost = await processEpisode(ep, baseDir, { noPrompt: LATEST_MODE || FORCE, force: FORCE });
       totalCost += cost;
       processed[feedSlug] = processedList;
       if (!processedList.includes(baseName)) processedList.push(baseName);
