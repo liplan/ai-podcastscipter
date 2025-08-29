@@ -23,6 +23,7 @@ import dotenv from 'dotenv';
 import { fetch as undiciFetch, ProxyAgent, Agent, setGlobalDispatcher } from 'undici';
 import { getAudioDurationInSeconds } from 'get-audio-duration';
 import { logNetworkError } from './logger.mjs';
+import readline from 'readline';
 
 dotenv.config();
 
@@ -52,6 +53,9 @@ const openai = new OpenAI({
 
 /* Parser nur fürs spätere Einlesen der erzeugten SRT */
 const parser = new SRTParser();
+
+// Globale Wartezeit für 429-Responses (wird bei Erfolg zurückgesetzt)
+let rateLimitDelay = 1000;
 
 /* ---------- Utilities ---------- */
 
@@ -143,9 +147,12 @@ async function checkOpenAIConnection() {
 
 /* ---------- Retry-Wrapper ---------- */
 async function retryRequest(fn, retries = 3, baseDelay = 1000) {
-  for (let attempt = 0; attempt <= retries; attempt++) {
+  let attempt = 0;
+  while (true) {
     try {
-      return await fn();
+      const res = await fn();
+      rateLimitDelay = 1000; // Reset bei Erfolg
+      return res;
     } catch (err) {
       if (err instanceof APIError) {
         console.error(`🔎 APIError status=${err.status} type=${err.type} message=${err.message}`);
@@ -156,10 +163,26 @@ async function retryRequest(fn, retries = 3, baseDelay = 1000) {
 
       logNetworkError(err, 'OpenAI request');
       const isConn = err instanceof APIConnectionError;
-      const isAPI  = err instanceof APIError && (err.status >= 500 || err.status === 429);
+      const is429 = err instanceof APIError && err.status === 429;
+      const isAPI  = err instanceof APIError && err.status >= 500;
+
+      if (is429) {
+        let wait = rateLimitDelay;
+        if (err.response) {
+          const ra = err.response.headers.get('retry-after');
+          if (ra) {
+            const ms = Number(ra) * 1000;
+            if (!Number.isNaN(ms) && ms > 0) wait = ms;
+          }
+        }
+        wait += Math.floor(Math.random() * 250); // Jitter
+        console.warn(`⏳  429 Too Many Requests – Retry in ${Math.round(wait/1000)}s …`);
+        await new Promise(r => setTimeout(r, wait));
+        rateLimitDelay = Math.min(rateLimitDelay * 2, 60_000); // Delay dynamisch erhöhen
+        continue;
+      }
 
       if ((isConn || isAPI) && attempt < retries) {
-        // Retry-After respektieren
         let wait = baseDelay * Math.pow(2, attempt);
         if (err instanceof APIError && err.response) {
           const ra = err.response.headers.get('retry-after');
@@ -171,8 +194,10 @@ async function retryRequest(fn, retries = 3, baseDelay = 1000) {
         wait += Math.floor(Math.random() * 250); // Jitter
         console.warn(`⚠️  ${isConn ? 'Netzwerkfehler' : `HTTP ${err.status}`} – Retry in ${Math.round(wait/1000)}s …`);
         await new Promise(r => setTimeout(r, wait));
+        attempt++;
         continue;
       }
+
       if (isConn) {
         console.error('❌  Verbindung zur OpenAI API fehlgeschlagen.');
         console.error('    Prüfe Proxy/CA: HTTPS_PROXY/HTTP_PROXY, NODE_EXTRA_CA_CERTS, SSL_CERT_FILE.');
@@ -379,15 +404,56 @@ Bullet-Points:`;
 
 /* ---------- CLI ---------- */
 
-const mp3File = process.argv[2];
-if (!mp3File) {
-  console.error('⚠️  Nutzung: node podcastScripter.mjs <audiofile.mp3>');
+const cliArgs = process.argv.slice(2);
+const resumeIdx = cliArgs.indexOf('--resume');
+const resume = resumeIdx !== -1;
+if (resume) cliArgs.splice(resumeIdx, 1);
+
+if (cliArgs.length === 0) {
+  console.error('⚠️  Nutzung: node podcastScripter.mjs <audio1.mp3> [audio2.mp3 …] [--resume]');
   process.exit(1);
+}
+
+const PRICE_PER_MINUTE = Number(process.env.PRICE_PER_MINUTE || 0.006);
+const progressPfad = path.join(process.cwd(), '.podcastScripter.progress.json');
+let startIndex = 0;
+if (resume && fs.existsSync(progressPfad)) {
+  try {
+    const saved = JSON.parse(fs.readFileSync(progressPfad, 'utf-8'));
+    if (Array.isArray(saved.files) && typeof saved.index === 'number' && saved.files.join('|') === cliArgs.join('|')) {
+      startIndex = saved.index;
+    }
+  } catch {}
+}
+
+let totalMin = 0;
+for (const file of cliArgs) {
+  if (!fs.existsSync(file)) {
+    console.error('❌  Datei nicht gefunden:', file);
+    process.exit(1);
+  }
+  const dur = await getAudioDurationInSeconds(file);
+  totalMin += dur / 60;
+}
+
+const estCost = totalMin * PRICE_PER_MINUTE;
+console.log(`💰  Geschätzte Kosten: ~$${estCost.toFixed(2)} (bei ${PRICE_PER_MINUTE}$/Min)`);
+
+const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+const proceed = await new Promise(res => rl.question('Fortfahren? (y/N) ', ans => { rl.close(); res(/^y(es)?$/i.test(ans)); }));
+if (!proceed) {
+  console.log('Abgebrochen.');
+  process.exit(0);
 }
 
 try {
   await checkOpenAIConnection();
-  await transkribiere(mp3File);
+  for (let i = startIndex; i < cliArgs.length; i++) {
+    const mp3File = cliArgs[i];
+    await transkribiere(mp3File);
+    fs.writeFileSync(progressPfad, JSON.stringify({ index: i + 1, files: cliArgs }, null, 2));
+  }
+  if (fs.existsSync(progressPfad)) fs.unlinkSync(progressPfad);
 } catch (err) {
   console.error('❌  Fehler:', err);
 }

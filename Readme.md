@@ -44,6 +44,16 @@ Nach der Transkription wird die Kurz­zusammenfassung außerdem automatisch als 
 
 `feeds.json` wird im Projektordner gespeichert und speichert alle jemals eingegebenen Feed-URLs samt Titel. Beim nächsten Start können vorhandene Feeds einfach über ihre Nummer ausgewählt werden.
 
+### Direktes Transkribieren von MP3-Dateien
+
+Das Skript `podcastScripter.mjs` kann auch unabhängig vom Feed-Downloader verwendet werden. Es akzeptiert eine oder mehrere MP3-Dateien als Argumente:
+
+```bash
+node podcastScripter.mjs <audio1.mp3> [audio2.mp3 …] [--resume]
+```
+
+Vor dem Start wird aus der Gesamtdauer der Dateien eine ungefähre Kostenabschätzung berechnet (Kosten pro Minute lassen sich über die Umgebungsvariable `PRICE_PER_MINUTE` anpassen). Erst nach Bestätigung beginnt die Transkription. Mit `--resume` kann ein abgebrochener Batch an derselben Stelle fortgesetzt werden.
+
 ### Korrektur erkannter Namen (`name-fixes.json`)
 
 Optional kann im Projektverzeichnis eine Datei `name-fixes.json` abgelegt werden.
