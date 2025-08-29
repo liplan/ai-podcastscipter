@@ -26,11 +26,23 @@ Die Methode eignet sich perspektivisch auch zur automatisierten Verarbeitung gan
 ### Aufruf mit Parametern
 
 ```bash
-node index.mjs <feed> <count>
+node index.mjs <feed> <count> [--resume]
 ```
 
 * `<feed>` kann eine RSS-URL sein oder die Nummer eines bereits gespeicherten Eintrags aus `feeds.json`.
 * `<count>` gibt an, wie viele der neuesten Episoden verarbeitet werden sollen (Standard: 1).
+* `--resume` überspringt bereits verarbeitete Episoden gemäß `processed.json`.
+
+### Optionen
+
+Zusätzliche Schalter steuern das Verhalten nach der Transkription:
+
+* `--keep-audio` – behält die heruntergeladene MP3-Datei (kein Löschdialog).
+* `--keep-temp` – behält Zwischenformate wie SRT und JSON.
+
+Ohne diese Optionen fragt das Skript nach erfolgreicher Verarbeitung, ob die Dateien entfernt werden sollen.
+
+Vor dem Start der Batch-Verarbeitung wird außerdem der geschätzte Speicherbedarf ermittelt. Ist nicht genug Platz verfügbar, weist das Skript darauf hin.
 
 ### Interaktiver Modus
 
@@ -44,6 +56,7 @@ Nach der Transkription wird die Kurz­zusammenfassung außerdem automatisch als 
 
 `feeds.json` wird im Projektordner gespeichert und speichert alle jemals eingegebenen Feed-URLs samt Titel. Beim nächsten Start können vorhandene Feeds einfach über ihre Nummer ausgewählt werden.
 
+
 ### Direktes Transkribieren von MP3-Dateien
 
 Das Skript `podcastScripter.mjs` kann auch unabhängig vom Feed-Downloader verwendet werden. Es akzeptiert eine oder mehrere MP3-Dateien als Argumente:
@@ -53,6 +66,9 @@ node podcastScripter.mjs <audio1.mp3> [audio2.mp3 …] [--resume]
 ```
 
 Vor dem Start wird aus der Gesamtdauer der Dateien eine ungefähre Kostenabschätzung berechnet (Kosten pro Minute lassen sich über die Umgebungsvariable `PRICE_PER_MINUTE` anpassen). Erst nach Bestätigung beginnt die Transkription. Mit `--resume` kann ein abgebrochener Batch an derselben Stelle fortgesetzt werden.
+
+Der Fortschritt jeder Transkription wird in `processed.json` gesichert. Mit der Option `--resume` lässt sich eine Sitzung später fortsetzen, ohne bereits verarbeitete Episoden erneut zu bearbeiten.
+
 
 ### Korrektur erkannter Namen (`name-fixes.json`)
 
