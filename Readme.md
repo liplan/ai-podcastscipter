@@ -40,6 +40,8 @@ Ohne Parameter startet das Skript interaktiv. Es zeigt alle in `feeds.json` hint
 
 Alle erzeugten Dateien landen unter `podcasts/<Podcastname>/`. Für jeden Feed wird also ein eigener Ordner mit dem Titel des Podcasts angelegt. Der Name wird komplett in Kleinbuchstaben umgewandelt, Sonderzeichen werden durch Unterstriche ersetzt und nach 32 Zeichen abgeschnitten. Innerhalb dieses Feed-Ordners legt das Skript für jede Episode einen Unterordner an. Dessen Name beginnt mit der vierstelligen Episodennummer (mit führenden Nullen) und enthält anschließend den bereinigten Episodentitel. Auch hier gilt eine maximale Länge von 32 Zeichen. Alle erzeugten Dateien verwenden denselben Präfix, sodass Audiodatei, Transkript und Zusammenfassung eindeutig einer Episode zugeordnet sind. Zusätzlich wird eine `metadata.json` mit sämtlichen Feed-Daten der Episode gespeichert.
 
+Nach der Transkription wird die Kurz­zusammenfassung außerdem automatisch als MP3 (`<basename>.summary.mp3`) mit einer Standardstimme erzeugt.
+
 `feeds.json` wird im Projektordner gespeichert und speichert alle jemals eingegebenen Feed-URLs samt Titel. Beim nächsten Start können vorhandene Feeds einfach über ihre Nummer ausgewählt werden.
 
 ### Korrektur erkannter Namen (`name-fixes.json`)

@@ -91,6 +91,24 @@ function ensureSegments(resp, fallbackDurationSec) {
   return [{ id: 0, start: 0, end, text }];
 }
 
+/**
+ * Erzeugt aus einem Text eine MP3-Sprachausgabe.
+ * @param {string} text   - Inhalt der gesprochen werden soll.
+ * @param {string} voice  - Gewünschte Stimme.
+ * @param {string} outPfad - Dateipfad für die MP3-Ausgabe.
+ */
+async function generateSpeech(text, voice, outPfad) {
+  console.log(`🔊  Erstelle Sprachausgabe (${voice}) …`);
+  const speechRes = await openai.audio.speech.create({
+    model: 'gpt-4o-mini-tts',
+    voice,
+    input: text,
+  });
+  const buffer = Buffer.from(await speechRes.arrayBuffer());
+  fs.writeFileSync(outPfad, buffer);
+  console.log('✅  Sprachausgabe gespeichert →', outPfad);
+}
+
 /* ---------- Netzwerk-Reachability ---------- */
 async function checkOpenAIConnection() {
   console.log('🔌  Prüfe Verbindung zu api.openai.com …');
@@ -337,8 +355,15 @@ Bullet-Points:`;
 
   const summary = summaryRes.output_text.trim();
   fs.writeFileSync(summaryPfad, summary, 'utf-8');
-
   console.log('✅  Zusammenfassung gespeichert →', summaryPfad);
+
+  const summaryAudioPfad = path.join(targetDir, `${basename}.summary.mp3`);
+  try {
+    await generateSpeech(summary, 'alloy', summaryAudioPfad);
+  } catch (e) {
+    console.warn('⚠️  Konnte Sprachausgabe nicht erzeugen:', e.message);
+  }
+
   console.log('\n🔎  Kurz­zusammenfassung:\n\n' + summary + '\n');
 
   const header = `# Transkript: ${basename}\n\n**Datum:** ${new Date().toISOString().split('T')[0]}\n**Sprecher:** ${[...new Set(jsonOut.map(j => j.speaker))].join(', ')}\n\n---\n\n## 🎙️ Transkript\n`;
