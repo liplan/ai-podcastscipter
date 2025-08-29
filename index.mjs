@@ -12,6 +12,11 @@ import { handleNetworkError, describeNetworkError, logError } from './logger.mjs
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// CLI-Optionen
+const argv = process.argv.slice(2).filter(a => a.startsWith('--'));
+const KEEP_AUDIO = argv.includes('--keep-audio');
+const KEEP_TEMP  = argv.includes('--keep-temp') || argv.includes('--keep-intermediate');
+
 const feedsPath = path.join(__dirname, 'feeds.json');
 let feeds = [];
 if (fs.existsSync(feedsPath)) {
@@ -43,6 +48,38 @@ function saveFeeds() {
 function prompt(question) {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   return new Promise(res => rl.question(question, ans => { rl.close(); res(ans); }));
+}
+
+function formatBytes(bytes) {
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let i = 0;
+  let b = bytes;
+  while (b >= 1024 && i < units.length - 1) { b /= 1024; i++; }
+  return `${b.toFixed(1)} ${units[i]}`;
+}
+
+async function warnIfInsufficientSpace(episodes, dir) {
+  let total = 0;
+  for (const ep of episodes) {
+    if (ep.size) {
+      total += ep.size;
+      continue;
+    }
+    try {
+      const head = await fetch(ep.url, { method: 'HEAD' });
+      const len  = head.headers.get('content-length');
+      if (len) { ep.size = parseInt(len, 10); total += ep.size; }
+    } catch (e) {
+      handleNetworkError(e, `HEAD ${ep.url}`);
+    }
+  }
+  try {
+    const { bavail, bsize } = fs.statfsSync(dir);
+    const free = bavail * bsize;
+    if (total > free) {
+      console.warn(`⚠️  Benötigt ~${formatBytes(total)}, verfügbar ~${formatBytes(free)}.`);
+    }
+  } catch {}
 }
 
 async function selectFeed() {
@@ -98,6 +135,7 @@ async function fetchEpisodes(feedUrl) {
   const episodes = feed.items.map(item => ({
     title: item.title,
     url: item.enclosure?.url,
+    size: item.enclosure?.length ? parseInt(item.enclosure.length, 10) : null,
     pubDate: item.pubDate,
     episodeNumber: item.itunes?.episode || item['itunes:episode'] || item.episode,
     metadata: item
@@ -164,6 +202,27 @@ async function processEpisode(ep, baseDir) {
     const child = spawn('node', [path.join(__dirname, 'podcastScripter.mjs'), audioPath], { stdio: 'inherit' });
     child.on('exit', code => code === 0 ? resolve() : reject(new Error('Transkription fehlgeschlagen')));
   });
+
+  if (!KEEP_AUDIO) {
+    const del = await prompt('Original-MP3 löschen? (j/N) ');
+    if (/^j/i.test(del)) {
+      try { fs.unlinkSync(audioPath); } catch {}
+    }
+  }
+
+  if (!KEEP_TEMP) {
+    const delTmp = await prompt('Zwischenformate (SRT/JSON) löschen? (j/N) ');
+    if (/^j/i.test(delTmp)) {
+      const base = path.basename(audioPath, '.mp3');
+      const srt = path.join(epDir, `${base}.transcript.srt`);
+      const json = path.join(epDir, `${base}.transcript.json`);
+      for (const p of [srt, json]) {
+        if (fs.existsSync(p)) {
+          try { fs.unlinkSync(p); } catch {}
+        }
+      }
+    }
+  }
 }
 
 function episodeBaseName(ep) {
@@ -216,6 +275,8 @@ function episodeBaseName(ep) {
     const num = parseInt(numStr, 10) || 1;
     toProcess = episodes.slice(0, num);
   }
+
+  await warnIfInsufficientSpace(toProcess, baseDir);
 
   for (const ep of toProcess) {
     const baseName = episodeBaseName(ep);
