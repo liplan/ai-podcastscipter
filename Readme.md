@@ -34,7 +34,7 @@ node index.mjs <feed> <count>
 
 ### Interaktiver Modus
 
-Ohne Parameter startet das Skript interaktiv. Es zeigt alle in `feeds.json` hinterlegten Feeds an und fragt nach der gewünschten Quelle sowie der Anzahl der Episoden.
+Ohne Parameter startet das Skript interaktiv. Es zeigt alle in `feeds.json` hinterlegten Feeds an und fragt nach der gewünschten Quelle. Anschließend werden die letzten bis zu 15 Episoden des gewählten Feeds angezeigt, aus denen einzelne Folgen zur Transkription ausgewählt werden können. Wird keine Episode gewählt, fragt das Skript wie bisher nach der Anzahl der ab heute zu verarbeitenden Folgen.
 
 ### Ablage der Ergebnisse
 

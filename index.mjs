@@ -178,10 +178,29 @@ async function processEpisode(ep, baseDir) {
   const feedSlug = feedTitle.toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 32);
   const baseDir = path.join(__dirname, 'podcasts', feedSlug);
   fs.mkdirSync(baseDir, { recursive: true });
+  const listCount = Math.min(15, episodes.length);
+  if (listCount > 0) {
+    console.log('\nLetzte Episoden:');
+    episodes.slice(0, listCount).forEach((ep, i) => {
+      const d = new Date(ep.pubDate);
+      const dateStr = isNaN(d) ? '' : d.toISOString().split('T')[0];
+      console.log(` ${i + 1}. [${dateStr}] ${ep.title}`);
+    });
+  }
 
-  const numStr = await prompt('Wieviele Episoden ab heute transkribieren? ');
-  const num = parseInt(numStr, 10) || 1;
-  const toProcess = episodes.slice(0, num);
+  const pickStr = await prompt('Nummern der zu transkribierenden Episoden (Komma getrennt, Enter für Anzahl ab heute): ');
+  let toProcess;
+  if (pickStr.trim()) {
+    const picks = Array.from(new Set(pickStr.split(/[\s,]+/)
+      .map(n => parseInt(n, 10))
+      .filter(n => n >= 1 && n <= listCount)));
+    toProcess = picks.map(i => episodes[i - 1]);
+  } else {
+    const numStr = await prompt('Wieviele Episoden ab heute transkribieren? ');
+    const num = parseInt(numStr, 10) || 1;
+    toProcess = episodes.slice(0, num);
+  }
+
   for (const ep of toProcess) {
     try { await processEpisode(ep, baseDir); }
     catch (e) { console.error('❌', e.message); }
