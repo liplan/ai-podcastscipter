@@ -38,9 +38,9 @@ node index.mjs <feed> <count> [--resume]
 Zusätzliche Schalter steuern das Verhalten nach der Transkription:
 
 * `--keep-audio` – behält die heruntergeladene MP3-Datei (kein Löschdialog).
-* `--keep-temp` – behält Zwischenformate wie SRT und JSON.
+* `--delete-temp` – löscht Zwischenformate wie SRT und JSON nach der Transkription.
 
-Ohne diese Optionen fragt das Skript nach erfolgreicher Verarbeitung, ob die Dateien entfernt werden sollen.
+Ohne `--keep-audio` fragt das Skript nach erfolgreicher Verarbeitung, ob die Audiodatei entfernt werden soll.
 
 Vor dem Start der Batch-Verarbeitung wird außerdem der geschätzte Speicherbedarf ermittelt. Ist nicht genug Platz verfügbar, weist das Skript darauf hin.
 
@@ -65,7 +65,7 @@ Das Skript `podcastScripter.mjs` kann auch unabhängig vom Feed-Downloader verwe
 node podcastScripter.mjs <audio1.mp3> [audio2.mp3 …] [--resume]
 ```
 
-Vor dem Start wird aus der Gesamtdauer der Dateien eine ungefähre Kostenabschätzung berechnet (Kosten pro Minute lassen sich über die Umgebungsvariable `PRICE_PER_MINUTE` anpassen). Erst nach Bestätigung beginnt die Transkription. Mit `--resume` kann ein abgebrochener Batch an derselben Stelle fortgesetzt werden.
+Vor dem Start wird aus der Gesamtdauer der Dateien eine ungefähre Kostenabschätzung berechnet (Kosten pro Minute lassen sich über die Umgebungsvariable `PRICE_PER_MINUTE` anpassen). Danach beginnt die Transkription automatisch. Mit `--resume` kann ein abgebrochener Batch an derselben Stelle fortgesetzt werden.
 
 Der Fortschritt jeder Transkription wird in `processed.json` gesichert. Mit der Option `--resume` lässt sich eine Sitzung später fortsetzen, ohne bereits verarbeitete Episoden erneut zu bearbeiten.
 
