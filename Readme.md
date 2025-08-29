@@ -32,6 +32,17 @@ node index.mjs <feed> <count>
 * `<feed>` kann eine RSS-URL sein oder die Nummer eines bereits gespeicherten Eintrags aus `feeds.json`.
 * `<count>` gibt an, wie viele der neuesten Episoden verarbeitet werden sollen (Standard: 1).
 
+### Optionen
+
+Zusätzliche Schalter steuern das Verhalten nach der Transkription:
+
+* `--keep-audio` – behält die heruntergeladene MP3-Datei (kein Löschdialog).
+* `--keep-temp` – behält Zwischenformate wie SRT und JSON.
+
+Ohne diese Optionen fragt das Skript nach erfolgreicher Verarbeitung, ob die Dateien entfernt werden sollen.
+
+Vor dem Start der Batch-Verarbeitung wird außerdem der geschätzte Speicherbedarf ermittelt. Ist nicht genug Platz verfügbar, weist das Skript darauf hin.
+
 ### Interaktiver Modus
 
 Ohne Parameter startet das Skript interaktiv. Es zeigt alle in `feeds.json` hinterlegten Feeds an und fragt nach der gewünschten Quelle. Anschließend werden die letzten bis zu 15 Episoden des gewählten Feeds angezeigt, aus denen einzelne Folgen zur Transkription ausgewählt werden können. Wird keine Episode gewählt, fragt das Skript wie bisher nach der Anzahl der ab heute zu verarbeitenden Folgen.
