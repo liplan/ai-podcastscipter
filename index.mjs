@@ -12,10 +12,14 @@ import { handleNetworkError, describeNetworkError, logError } from './logger.mjs
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// CLI-Optionen
-const argv = process.argv.slice(2).filter(a => a.startsWith('--'));
-const KEEP_AUDIO = argv.includes('--keep-audio');
-const DELETE_TEMP = argv.includes('--delete-temp') || argv.includes('--delete-intermediate');
+// CLI-Argumente
+const allArgs     = process.argv.slice(2);
+const optionArgs  = allArgs.filter(a => a.startsWith('--'));
+const positional  = allArgs.filter(a => !a.startsWith('--'));
+const KEEP_AUDIO  = optionArgs.includes('--keep-audio');
+let DELETE_TEMP   = optionArgs.includes('--delete-temp') || optionArgs.includes('--delete-intermediate');
+const LATEST_MODE = positional.length > 0;
+if (LATEST_MODE) DELETE_TEMP = true; // Zwischenformate im Batch-Modus immer löschen
 
 const feedsPath = path.join(__dirname, 'feeds.json');
 let feeds = [];
@@ -168,7 +172,7 @@ async function downloadFile(url, dest, retries = 3) {
   }
 }
 
-async function processEpisode(ep, baseDir) {
+async function processEpisode(ep, baseDir, { noPrompt = false } = {}) {
   const baseName = episodeBaseName(ep);
   const epDir    = path.join(baseDir, baseName);
   fs.mkdirSync(epDir, { recursive: true });
@@ -181,7 +185,7 @@ async function processEpisode(ep, baseDir) {
   if (!fs.existsSync(audioPath)) {
     console.log('⬇️  Lade herunter:', ep.title);
     await downloadFile(ep.url, audioPath);
-  } else {
+  } else if (!noPrompt) {
     const overwrite = await prompt(`Datei für "${ep.title}" existiert. Überschreiben? (j/N) `);
     if (/^j/i.test(overwrite)) {
       await downloadFile(ep.url, audioPath);
@@ -189,13 +193,14 @@ async function processEpisode(ep, baseDir) {
   }
 
   const durationSec = await getAudioDurationInSeconds(audioPath);
-  const cost = (durationSec / 60 * 0.006).toFixed(2);
-  console.log(`⏱️  Dauer: ${(durationSec/60).toFixed(1)} min → Kosten ca. $${cost}`);
+  const cost = durationSec / 60 * 0.006;
+  console.log(`⏱️  Dauer: ${(durationSec/60).toFixed(1)} min → Kosten ca. $${cost.toFixed(2)}`);
 
   const transcriptPath = path.join(epDir, `${path.basename(audioPath, '.mp3')}.md`);
   if (fs.existsSync(transcriptPath)) {
+    if (noPrompt) return 0; // skip silently
     const reuse = await prompt('Transkript bereits vorhanden. Überspringen? (J/n) ');
-    if (!/^n/i.test(reuse)) return; // skip
+    if (!/^n/i.test(reuse)) return 0; // skip
   }
 
   await new Promise((resolve, reject) => {
@@ -204,9 +209,13 @@ async function processEpisode(ep, baseDir) {
   });
 
   if (!KEEP_AUDIO) {
-    const del = await prompt('Original-MP3 löschen? (j/N) ');
-    if (/^j/i.test(del)) {
+    if (noPrompt) {
       try { fs.unlinkSync(audioPath); } catch {}
+    } else {
+      const del = await prompt('Original-MP3 löschen? (j/N) ');
+      if (/^j/i.test(del)) {
+        try { fs.unlinkSync(audioPath); } catch {}
+      }
     }
   }
 
@@ -220,6 +229,7 @@ async function processEpisode(ep, baseDir) {
       }
     }
   }
+  return cost;
 }
 
 function episodeBaseName(ep) {
@@ -230,18 +240,32 @@ function episodeBaseName(ep) {
 
 (async () => {
   const resume = process.argv.includes('--resume');
-  const feedUrl = await selectFeed();
+  let feedUrl, count;
+  if (LATEST_MODE) {
+    const feedArg = positional[0];
+    const idx = parseInt(feedArg, 10);
+    if (!isNaN(idx) && feeds[idx - 1]) {
+      feedUrl = feeds[idx - 1].url;
+    } else {
+      feedUrl = feedArg;
+    }
+    count = parseInt(positional[1], 10) || 1;
+  } else {
+    feedUrl = await selectFeed();
+  }
+
   let episodes, parsedTitle;
   try {
-    ({ episodes, title: parsedTitle } = await fetchEpisodes(feedUrl)); // already sorted by pubDate
+    ({ episodes, title: parsedTitle } = await fetchEpisodes(feedUrl));
   } catch (e) {
     console.error('❌ Episoden konnten nicht geladen werden:', describeNetworkError(e));
     process.exit(1);
   }
   const feedObj = feeds.find(f => f.url === feedUrl);
-  let feedTitle = feedObj?.title || parsedTitle;
-  if (!feedTitle) {
-    feedTitle = (await prompt('Titel des Feeds: ')).trim() || feedUrl;
+  let feedTitle = feedObj?.title || parsedTitle || feedUrl;
+  if (!feedObj && LATEST_MODE) {
+    feeds.push({ url: feedUrl, title: feedTitle });
+    saveFeeds();
   }
   if (feedObj && !feedObj.title && feedTitle) {
     feedObj.title = feedTitle;
@@ -250,31 +274,37 @@ function episodeBaseName(ep) {
   const feedSlug = feedTitle.toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 32);
   const baseDir = path.join(__dirname, 'podcasts', feedSlug);
   fs.mkdirSync(baseDir, { recursive: true });
-  const listCount = Math.min(15, episodes.length);
-  if (listCount > 0) {
-    console.log('\nLetzte Episoden:');
-    episodes.slice(0, listCount).forEach((ep, i) => {
-      const d = new Date(ep.pubDate);
-      const dateStr = isNaN(d) ? '' : d.toISOString().split('T')[0];
-      console.log(` ${i + 1}. [${dateStr}] ${ep.title}`);
-    });
-  }
 
-  const pickStr = await prompt('Nummern der zu transkribierenden Episoden (Komma getrennt, Enter für Anzahl ab heute): ');
   let toProcess;
-  if (pickStr.trim()) {
-    const picks = Array.from(new Set(pickStr.split(/[\s,]+/)
-      .map(n => parseInt(n, 10))
-      .filter(n => n >= 1 && n <= listCount)));
-    toProcess = picks.map(i => episodes[i - 1]);
+  if (LATEST_MODE) {
+    toProcess = episodes.slice(0, count);
   } else {
-    const numStr = await prompt('Wieviele Episoden ab heute transkribieren? ');
-    const num = parseInt(numStr, 10) || 1;
-    toProcess = episodes.slice(0, num);
+    const listCount = Math.min(15, episodes.length);
+    if (listCount > 0) {
+      console.log('\nLetzte Episoden:');
+      episodes.slice(0, listCount).forEach((ep, i) => {
+        const d = new Date(ep.pubDate);
+        const dateStr = isNaN(d) ? '' : d.toISOString().split('T')[0];
+        console.log(` ${i + 1}. [${dateStr}] ${ep.title}`);
+      });
+    }
+
+    const pickStr = await prompt('Nummern der zu transkribierenden Episoden (Komma getrennt, Enter für Anzahl ab heute): ');
+    if (pickStr.trim()) {
+      const picks = Array.from(new Set(pickStr.split(/[\s,]+/)
+        .map(n => parseInt(n, 10))
+        .filter(n => n >= 1 && n <= listCount)));
+      toProcess = picks.map(i => episodes[i - 1]);
+    } else {
+      const numStr = await prompt('Wieviele Episoden ab heute transkribieren? ');
+      const num = parseInt(numStr, 10) || 1;
+      toProcess = episodes.slice(0, num);
+    }
   }
 
   await warnIfInsufficientSpace(toProcess, baseDir);
 
+  let totalCost = 0;
   for (const ep of toProcess) {
     const baseName = episodeBaseName(ep);
     const processedList = processed[feedSlug] || [];
@@ -283,14 +313,20 @@ function episodeBaseName(ep) {
         console.log(`⏭️  Überspringe bereits verarbeitete Episode: ${ep.title}`);
         continue;
       }
-      const again = await prompt(`Episode "${ep.title}" bereits verarbeitet. Erneut bearbeiten? (j/N) `);
-      if (!/^j/i.test(again)) {
-        console.log('⏭️  Übersprungen.');
+      if (!LATEST_MODE) {
+        const again = await prompt(`Episode "${ep.title}" bereits verarbeitet. Erneut bearbeiten? (j/N) `);
+        if (!/^j/i.test(again)) {
+          console.log('⏭️  Übersprungen.');
+          continue;
+        }
+      } else {
+        console.log(`⏭️  Überspringe bereits verarbeitete Episode: ${ep.title}`);
         continue;
       }
     }
     try {
-      await processEpisode(ep, baseDir);
+      const cost = await processEpisode(ep, baseDir, { noPrompt: LATEST_MODE });
+      totalCost += cost;
       processed[feedSlug] = processedList;
       if (!processedList.includes(baseName)) processedList.push(baseName);
       saveProcessed();
@@ -298,5 +334,8 @@ function episodeBaseName(ep) {
       logError(e, `processEpisode ${ep.title}`);
       console.error('❌', e.message);
     }
+  }
+  if (LATEST_MODE) {
+    console.log(`\n💰  Gesamtkosten: $${totalCost.toFixed(2)}`);
   }
 })();

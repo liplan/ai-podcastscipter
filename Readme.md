@@ -33,6 +33,8 @@ node index.mjs <feed> <count> [--resume]
 * `<count>` gibt an, wie viele der neuesten Episoden verarbeitet werden sollen (Standard: 1).
 * `--resume` überspringt bereits verarbeitete Episoden gemäß `processed.json`.
 
+Im Parameter- bzw. **Letzte-Episoden-Modus** läuft die Verarbeitung ohne weitere Rückfragen. Zwischenformate werden automatisch gelöscht und am Ende wird eine Kostensumme ausgegeben.
+
 ### Optionen
 
 Zusätzliche Schalter steuern das Verhalten nach der Transkription:
@@ -40,7 +42,7 @@ Zusätzliche Schalter steuern das Verhalten nach der Transkription:
 * `--keep-audio` – behält die heruntergeladene MP3-Datei (kein Löschdialog).
 * `--delete-temp` – löscht Zwischenformate wie SRT und JSON nach der Transkription.
 
-Ohne `--keep-audio` fragt das Skript nach erfolgreicher Verarbeitung, ob die Audiodatei entfernt werden soll.
+Im interaktiven Modus fragt das Skript ohne `--keep-audio` nach erfolgreicher Verarbeitung, ob die Audiodatei entfernt werden soll. Im Parameter-Modus entfällt diese Nachfrage und die Datei wird bei Bedarf direkt gelöscht.
 
 Vor dem Start der Batch-Verarbeitung wird außerdem der geschätzte Speicherbedarf ermittelt. Ist nicht genug Platz verfügbar, weist das Skript darauf hin.
 
