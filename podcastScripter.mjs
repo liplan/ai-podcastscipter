@@ -282,7 +282,7 @@ async function transkribiere(mp3Pfad) {
 
       // Offset mit letztem Segment-Ende erhöhen
       const last = partSegments[partSegments.length - 1];
-      offset = (last?.end ?? offset);
+      offset += (last?.end ?? 0);
     }
 
     srtText = srtChunks.join('\n');
