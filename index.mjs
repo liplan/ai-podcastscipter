@@ -118,6 +118,20 @@ async function selectFeed() {
   return url;
 }
 
+function extractSpeakers(item) {
+  const fields = [
+    item.itunes?.author,
+    item['itunes:author'],
+    item.author,
+    item['dc:creator']
+  ].filter(Boolean);
+  if (item.content) {
+    const match = item.content.match(/(?:mit|with)\s+([^<\n]+)/i);
+    if (match) fields.push(match[1]);
+  }
+  return [...new Set(fields.flatMap(f => f.split(/,| und | & | and /).map(s => s.trim())))].filter(Boolean);
+}
+
 async function fetchEpisodes(feedUrl) {
   const parser = new Parser();
   let feed;
@@ -137,14 +151,18 @@ async function fetchEpisodes(feedUrl) {
       throw new Error(`Feed konnte nicht geladen werden: ${describeNetworkError(err)}`);
     }
   }
-  const episodes = feed.items.map(item => ({
-    title: item.title,
-    url: item.enclosure?.url,
-    size: item.enclosure?.length ? parseInt(item.enclosure.length, 10) : null,
-    pubDate: item.pubDate,
-    episodeNumber: item.itunes?.episode || item['itunes:episode'] || item.episode,
-    metadata: item
-  })).filter(e => e.url);
+  const episodes = feed.items.map(item => {
+    const speakers = extractSpeakers(item);
+    if (speakers.length) item.speakers = speakers;
+    return {
+      title: item.title,
+      url: item.enclosure?.url,
+      size: item.enclosure?.length ? parseInt(item.enclosure.length, 10) : null,
+      pubDate: item.pubDate,
+      episodeNumber: item.itunes?.episode || item['itunes:episode'] || item.episode,
+      metadata: item
+    };
+  }).filter(e => e.url);
   episodes.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
   return { episodes, title: feed.title };
 }
@@ -245,6 +263,21 @@ function episodeBaseName(ep) {
   return (epPrefix + rawSlug).slice(0, 32);
 }
 
+function backfillSpeakers(baseDir, episodes) {
+  for (const ep of episodes) {
+    const baseName = episodeBaseName(ep);
+    const metaPath = path.join(baseDir, baseName, 'metadata.json');
+    if (!fs.existsSync(metaPath)) continue;
+    try {
+      const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+      if (!meta.speakers && ep.metadata?.speakers?.length) {
+        meta.speakers = ep.metadata.speakers;
+        fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2));
+      }
+    } catch (e) { logError(e, `backfill ${metaPath}`); }
+  }
+}
+
 (async () => {
   const resume = process.argv.includes('--resume');
   let feedUrl, count;
@@ -281,6 +314,7 @@ function episodeBaseName(ep) {
   const feedSlug = feedTitle.toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 32);
   const baseDir = path.join(__dirname, 'podcasts', feedSlug);
   fs.mkdirSync(baseDir, { recursive: true });
+  backfillSpeakers(baseDir, episodes);
 
   let toProcess;
   if (LATEST_MODE) {

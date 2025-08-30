@@ -227,6 +227,12 @@ async function transkribiere(mp3Pfad) {
   const speakerTxtPfad  = path.join(targetDir, `${basename}.speakers.txt`);
   const summaryPfad     = path.join(targetDir, `${basename}.summary.md`);
   const markdownPfad    = path.join(targetDir, `${basename}.md`);
+  const metaPfad        = path.join(targetDir, 'metadata.json');
+  let epMeta = {};
+  if (fs.existsSync(metaPfad)) {
+    try { epMeta = JSON.parse(fs.readFileSync(metaPfad, 'utf-8')); } catch {}
+  }
+  const metaSpeakers = Array.isArray(epMeta.speakers) ? epMeta.speakers : [];
 
   const maxSize  = 10 * 1024 * 1024;
   const fileSize = fs.statSync(mp3Pfad).size;
@@ -327,7 +333,20 @@ Nur die Namen und Reihenfolge. Falls „Kevin“ vorkommt, ist eigentlich „Gav
   console.log('📄  GPT-Antwort gespeichert →', speakerTxtPfad);
 
   const matchNames = [...gptSpeakerText.matchAll(/Speaker\s*(\d):\s*([\p{L}\-']+)/giu)];
-  let nameMap = new Map(matchNames.map(([ , id, name ]) => [`Speaker ${id}`, name]));
+  let nameMap = new Map();
+  if (metaSpeakers.length) {
+    for (const [ , id, shortName ] of matchNames) {
+      const full = metaSpeakers.find(s => s.toLowerCase().includes(shortName.toLowerCase()));
+      nameMap.set(`Speaker ${id}`, full || shortName);
+    }
+    let idx = 1;
+    for (const sp of metaSpeakers) {
+      const key = `Speaker ${idx++}`;
+      if (!nameMap.has(key)) nameMap.set(key, sp);
+    }
+  } else {
+    nameMap = new Map(matchNames.map(([ , id, name ]) => [`Speaker ${id}`, name]));
+  }
 
   const fixPfad = path.join(__dirname, 'name-fixes.json');
   let fixes = {};
@@ -368,9 +387,10 @@ Nur die Namen und Reihenfolge. Falls „Kevin“ vorkommt, ist eigentlich „Gav
   const maxChars      = 12000;
   const plainText     = jsonOut.map(j => `${j.speaker}: ${j.text}`).join('\n');
   const summaryInput  = plainText.slice(0, maxChars);
+  const speakerList   = [...new Set(jsonOut.map(j => j.speaker))];
 
   const gptSummaryPrompt =
-`Fasse den folgenden Podcast prägnant in **7 Bullet-Points** (klar, informativ, deutsch):
+`Fasse den folgenden Podcast mit ${speakerList.join(', ')} prägnant in **7 Bullet-Points** (klar, informativ, deutsch):
 -----
 ${summaryInput}
 -----
@@ -396,7 +416,7 @@ Bullet-Points:`;
 
   console.log('\n🔎  Kurz­zusammenfassung:\n\n' + summary + '\n');
 
-  const header = `# Transkript: ${basename}\n\n**Datum:** ${new Date().toISOString().split('T')[0]}\n**Sprecher:** ${[...new Set(jsonOut.map(j => j.speaker))].join(', ')}\n\n---\n\n## 🎙️ Transkript\n`;
+  const header = `# Transkript: ${basename}\n\n**Datum:** ${new Date().toISOString().split('T')[0]}\n**Sprecher:** ${speakerList.join(', ')}\n\n---\n\n## 🎙️ Transkript\n`;
 
   const transcript = jsonOut.map(j =>
     `**[${j.start}] ${j.speaker}:** ${j.text}`).join('\n');
