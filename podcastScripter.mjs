@@ -73,8 +73,9 @@ function formatTime(secFloat) {
   return `${hh}:${mm}:${ss},${msec}`;
 }
 
-/** Baut aus Transkript-Segmenten eine SRT-Zeichenkette (mit optionalem Offset in Sekunden). */
-function segmentsToSrt(segments, offsetSec = 0) {
+/** Baut aus Transkript-Segmenten eine SRT-Zeichenkette (mit optionalem Offset in Sekunden
+    und optionalem Startindex für die Nummerierung). */
+function segmentsToSrt(segments, offsetSec = 0, startIndex = 0) {
   if (!Array.isArray(segments) || segments.length === 0) {
     throw new Error('Transkript-JSON enthält keine segments – SRT kann nicht erzeugt werden.');
   }
@@ -82,7 +83,7 @@ function segmentsToSrt(segments, offsetSec = 0) {
     const start = formatTime((seg.start ?? 0) + offsetSec);
     const end   = formatTime((seg.end   ?? 0) + offsetSec);
     const text  = String(seg.text ?? '').trim();
-    return `${i + 1}\n${start} --> ${end}\n${text}\n`;
+    return `${i + 1 + startIndex}\n${start} --> ${end}\n${text}\n`;
   }).join('\n');
 }
 
@@ -265,6 +266,7 @@ async function transkribiere(mp3Pfad) {
     const parts = fs.readdirSync(tmpDir).filter(f => f.endsWith('.mp3')).sort();
     const srtChunks = [];
     let offset = 0;
+    let idOffset = 0;
 
     for (const p of parts) {
       const fullPath = path.join(tmpDir, p);
@@ -277,8 +279,9 @@ async function transkribiere(mp3Pfad) {
 
       // Segmente sicherstellen (Fallback: Ein-Segment mit Länge segmentTime)
       const partSegments = ensureSegments(resp, segmentTime);
-      const srtPart = segmentsToSrt(partSegments, offset);
+      const srtPart = segmentsToSrt(partSegments, offset, idOffset);
       srtChunks.push(srtPart);
+      idOffset += partSegments.length;
 
       // Offset mit letztem Segment-Ende erhöhen
       const last = partSegments[partSegments.length - 1];
