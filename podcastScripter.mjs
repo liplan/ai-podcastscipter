@@ -23,6 +23,7 @@ import dotenv from 'dotenv';
 import { fetch as undiciFetch, ProxyAgent, Agent, setGlobalDispatcher } from 'undici';
 import { getAudioDurationInSeconds } from 'get-audio-duration';
 import { logNetworkError } from './logger.mjs';
+import { Deepgram } from '@deepgram/sdk';
 
 dotenv.config();
 
@@ -73,6 +74,13 @@ function formatTime(secFloat) {
   return `${hh}:${mm}:${ss},${msec}`;
 }
 
+/** Wandelt einen SRT-Zeitstempel (HH:MM:SS,mmm) in Sekunden um. */
+function srtTimeToSeconds(ts) {
+  const [hms, ms] = String(ts).split(',');
+  const [h, m, s] = hms.split(':').map(Number);
+  return h * 3600 + m * 60 + Number(s) + Number(ms) / 1000;
+}
+
 /** Baut aus Transkript-Segmenten eine SRT-Zeichenkette (mit optionalem Offset in Sekunden
     und optionalem Startindex für die Nummerierung). */
 function segmentsToSrt(segments, offsetSec = 0, startIndex = 0) {
@@ -99,6 +107,41 @@ function ensureSegments(resp, fallbackDurationSec) {
   const end = dur > 0 ? dur : Math.max(Number(resp?.duration) || 0, 0);
 
   return [{ id: 0, start: 0, end, text }];
+}
+
+/** Führt Sprecher-Diarisierung via Deepgram durch und liefert Segmente zurück. */
+async function diarizeWithDeepgram(mp3Pfad) {
+  const DG_API_KEY = process.env.DEEPGRAM_API_KEY;
+  if (!DG_API_KEY) {
+    console.warn('⚠️  Kein DEEPGRAM_API_KEY gesetzt – überspringe Diarisierung.');
+    return [];
+  }
+  const dg = new Deepgram(DG_API_KEY);
+  try {
+    const source = {
+      buffer: fs.readFileSync(mp3Pfad),
+      mimetype: 'audio/mpeg'
+    };
+    const dgRes = await dg.transcription.preRecorded(source, { diarize: true, punctuate: false });
+    const words = dgRes?.results?.channels?.[0]?.alternatives?.[0]?.words || [];
+    if (!words.length) return [];
+    const segments = [];
+    let current = null;
+    for (const w of words) {
+      const sp = Number(w.speaker ?? w.speaker_id ?? 0) + 1; // 1-basiert
+      if (!current || current.speaker !== sp) {
+        if (current) segments.push(current);
+        current = { start: w.start, end: w.end, speaker: sp };
+      } else {
+        current.end = w.end;
+      }
+    }
+    if (current) segments.push(current);
+    return segments;
+  } catch (err) {
+    console.warn('⚠️  Deepgram-Diarisierung fehlgeschlagen:', err.message);
+    return [];
+  }
 }
 
 /**
@@ -366,13 +409,29 @@ Nur die Namen und Reihenfolge. Falls „Kevin“ vorkommt, ist eigentlich „Gav
   console.log('\n🎙️  Finale Sprecherliste:');
   for (const [key, val] of nameMap.entries()) console.log(`  ${key} → ${val}`);
 
-  let speakerCounter = 1;
-  const speakerTotal = nameMap.size || 2;
-
-  for (const entry of srtJson) {
-    const spKey = `Speaker ${((speakerCounter - 1) % speakerTotal) + 1}`;
-    entry.speaker = nameMap.get(spKey) || spKey;
-    speakerCounter++;
+  const diarSegments = await diarizeWithDeepgram(mp3Pfad);
+  if (diarSegments.length) {
+    console.log(`🔍  Diarisierung erfolgreich: ${diarSegments.length} Segmente.`);
+    for (const entry of srtJson) {
+      const mid = (srtTimeToSeconds(entry.startTime) + srtTimeToSeconds(entry.endTime)) / 2;
+      const seg = diarSegments.find(d => mid >= d.start && mid <= d.end);
+      if (seg) {
+        const spKey = `Speaker ${seg.speaker}`;
+        entry.speaker = nameMap.get(spKey) || spKey;
+      } else {
+        const fallbackKey = 'Speaker 1';
+        entry.speaker = nameMap.get(fallbackKey) || fallbackKey;
+      }
+    }
+  } else {
+    console.warn('⚠️  Keine Diarisierungsergebnisse – verwende Rotationslogik.');
+    let speakerCounter = 1;
+    const speakerTotal = nameMap.size || 2;
+    for (const entry of srtJson) {
+      const spKey = `Speaker ${((speakerCounter - 1) % speakerTotal) + 1}`;
+      entry.speaker = nameMap.get(spKey) || spKey;
+      speakerCounter++;
+    }
   }
 
   const jsonOut = srtJson.map(e => ({
