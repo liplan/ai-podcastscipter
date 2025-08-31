@@ -2,7 +2,7 @@
   "name": "ai-podcast-transcriber",
   "version": "1.0.0",
   "type": "module",
-  "description": "Transkribiert Podcasts mit GPT-4o und erkennt Sprecher automatisch",
+  "description": "Transkribiert Podcasts mit OpenAI Whisper und erkennt Sprecher automatisch",
   "main": "index.mjs",
   "scripts": {
     "start": "node index.mjs",
