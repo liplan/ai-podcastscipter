@@ -15,6 +15,7 @@
     "openai": "^5.16.0",
     "rss-parser": "^3.13.0",
     "srt-parser-2": "^1.2.3",
-    "undici": "^7.15.0"
+    "undici": "^7.15.0",
+    "@deepgram/sdk": "^3.5.0"
   }
 }
