@@ -352,9 +352,16 @@ async function transkribiere(mp3Pfad) {
   // Für Folge-Logik weiterhin SRT → JSON (einfaches Objekt pro Zeile)
   const srtJson = parser.fromSrt(srtText);
 
-  const sampleLines = srtJson.slice(0, 6).map(e => e.text).join('\n');
+  const totalLines = srtJson.length;
+  const sampleChunks = [];
+  if (totalLines > 0) sampleChunks.push(srtJson.slice(0, 3));
+  if (totalLines > 6) sampleChunks.push(srtJson.slice(Math.floor(totalLines / 2) - 1, Math.floor(totalLines / 2) + 2));
+  if (totalLines > 9) sampleChunks.push(srtJson.slice(-3));
+  const sampleLines = sampleChunks
+    .map(chunk => chunk.map(e => e.text).join('\n'))
+    .join('\n...\n');
   const gptSpeakerPrompt =
-`Hier sind die ersten Zeilen eines Podcast-Transkripts:
+`Hier sind mehrere Auszüge eines Podcast-Transkripts:
 
 ${sampleLines}
 
@@ -373,23 +380,84 @@ Nur die Namen und Reihenfolge. Falls „Kevin“ vorkommt, ist eigentlich „Gav
   }));
 
   const gptSpeakerText = speakerRes.output_text.trim();
-  fs.writeFileSync(speakerTxtPfad, gptSpeakerText, 'utf-8');
-  console.log('📄  GPT-Antwort gespeichert →', speakerTxtPfad);
+  console.log('📄  GPT-Antwort erhalten.');
 
   const matchNames = [...gptSpeakerText.matchAll(/Speaker\s*(\d):\s*([\p{L}\-']+)/giu)];
-  let nameMap = new Map();
-  if (metaSpeakers.length) {
-    for (const [ , id, shortName ] of matchNames) {
-      const full = metaSpeakers.find(s => s.toLowerCase().includes(shortName.toLowerCase()));
-      nameMap.set(`Speaker ${id}`, full || shortName);
-    }
-    let idx = 1;
-    for (const sp of metaSpeakers) {
-      const key = `Speaker ${idx++}`;
-      if (!nameMap.has(key)) nameMap.set(key, sp);
+  const transcriptNames = matchNames.map(([ , , n ]) => n);
+  const knownNames = metaSpeakers.length ? metaSpeakers : transcriptNames;
+
+  const diarSegments = await diarizeWithDeepgram(mp3Pfad);
+  const speakerSamples = new Map();
+  if (diarSegments.length) {
+    console.log(`🔍  Diarisierung erfolgreich: ${diarSegments.length} Segmente.`);
+    for (const entry of srtJson) {
+      const mid = (srtTimeToSeconds(entry.startTime) + srtTimeToSeconds(entry.endTime)) / 2;
+      const seg = diarSegments.find(d => mid >= d.start && mid <= d.end);
+      const id = seg ? seg.speaker : 1;
+      entry.speakerId = id;
+      const arr = speakerSamples.get(id) || [];
+      if (arr.join(' ').length < 160) arr.push(entry.text.trim());
+      speakerSamples.set(id, arr);
     }
   } else {
-    nameMap = new Map(matchNames.map(([ , id, name ]) => [`Speaker ${id}`, name]));
+    console.warn('⚠️  Keine Diarisierungsergebnisse – verwende Rotationslogik.');
+    let speakerCounter = 1;
+    const speakerTotal = knownNames.length || 2;
+    for (const entry of srtJson) {
+      const id = ((speakerCounter - 1) % speakerTotal) + 1;
+      entry.speakerId = id;
+      const arr = speakerSamples.get(id) || [];
+      if (arr.join(' ').length < 160) arr.push(entry.text.trim());
+      speakerSamples.set(id, arr);
+      speakerCounter++;
+    }
+  }
+
+  const snippetPrompt = [...speakerSamples.entries()]
+    .map(([id, lines]) => `Speaker ${id}: ${lines.join(' ')}`)
+    .join('\n');
+  const speakerPrompt2 =
+`Bekannte Sprecher in diesem Podcast: ${knownNames.join(', ')}.
+Ordne den folgenden Redeausschnitten den passenden Namen zu:
+
+${snippetPrompt}
+
+Antwortformat:
+Speaker 1: Name
+Speaker 2: Name`;
+
+  console.log('🤖  Ordne Sprecher-IDs Namen zu …');
+  const assignRes = await retryRequest(() => openai.responses.create({
+    model: 'gpt-4o',
+    instructions: 'Du bist ein Assistent zur Sprechererkennung in Podcasts.',
+    input: speakerPrompt2
+  }));
+  const assignText = assignRes.output_text.trim();
+
+  const matchIdNames = [...assignText.matchAll(/Speaker\s*(\d+):\s*([\p{L}\-']+)/giu)];
+  let nameMap = new Map();
+  if (matchIdNames.length) {
+    for (const [ , id, name ] of matchIdNames) {
+      let finalName = name;
+      if (metaSpeakers.length) {
+        const full = metaSpeakers.find(s => s.toLowerCase().includes(name.toLowerCase()));
+        if (full) finalName = full;
+      }
+      nameMap.set(`Speaker ${id}`, finalName);
+    }
+  }
+  for (const sp of metaSpeakers) {
+    if (![...nameMap.values()].some(n => n === sp)) {
+      const nextId = [...speakerSamples.keys()].find(id => !nameMap.has(`Speaker ${id}`));
+      if (nextId !== undefined) nameMap.set(`Speaker ${nextId}`, sp);
+    }
+  }
+  let idx = 0;
+  for (const id of speakerSamples.keys()) {
+    const key = `Speaker ${id}`;
+    if (!nameMap.has(key) && transcriptNames[idx]) {
+      nameMap.set(key, transcriptNames[idx++]);
+    }
   }
 
   const fixPfad = path.join(__dirname, 'name-fixes.json');
@@ -406,32 +474,22 @@ Nur die Namen und Reihenfolge. Falls „Kevin“ vorkommt, ist eigentlich „Gav
     }
   }
 
+  const finalSpeakerListText = [...speakerSamples.keys()].sort((a,b)=>a-b)
+    .map(id => {
+      const key = `Speaker ${id}`;
+      return `${key}: ${nameMap.get(key) || key}`;
+    })
+    .join('\n');
+  const finalTxt = `Detected names:\n${gptSpeakerText}\n\nSpeaker mapping:\n${finalSpeakerListText}`;
+  fs.writeFileSync(speakerTxtPfad, finalTxt, 'utf-8');
+  console.log('📄  Finale Sprecherliste gespeichert →', speakerTxtPfad);
+
   console.log('\n🎙️  Finale Sprecherliste:');
   for (const [key, val] of nameMap.entries()) console.log(`  ${key} → ${val}`);
 
-  const diarSegments = await diarizeWithDeepgram(mp3Pfad);
-  if (diarSegments.length) {
-    console.log(`🔍  Diarisierung erfolgreich: ${diarSegments.length} Segmente.`);
-    for (const entry of srtJson) {
-      const mid = (srtTimeToSeconds(entry.startTime) + srtTimeToSeconds(entry.endTime)) / 2;
-      const seg = diarSegments.find(d => mid >= d.start && mid <= d.end);
-      if (seg) {
-        const spKey = `Speaker ${seg.speaker}`;
-        entry.speaker = nameMap.get(spKey) || spKey;
-      } else {
-        const fallbackKey = 'Speaker 1';
-        entry.speaker = nameMap.get(fallbackKey) || fallbackKey;
-      }
-    }
-  } else {
-    console.warn('⚠️  Keine Diarisierungsergebnisse – verwende Rotationslogik.');
-    let speakerCounter = 1;
-    const speakerTotal = nameMap.size || 2;
-    for (const entry of srtJson) {
-      const spKey = `Speaker ${((speakerCounter - 1) % speakerTotal) + 1}`;
-      entry.speaker = nameMap.get(spKey) || spKey;
-      speakerCounter++;
-    }
+  for (const entry of srtJson) {
+    const spKey = `Speaker ${entry.speakerId}`;
+    entry.speaker = nameMap.get(spKey) || spKey;
   }
 
   const jsonOut = srtJson.map(e => ({
