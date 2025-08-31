@@ -3,7 +3,7 @@
 /* -------------------------------------------------------------
  * Podcast-Transkription + Sprechererkennung + Zusammenfassung
  * -------------------------------------------------------------
- * 1. GPT-4o-mini-transcribe → JSON → SRT
+ * 1. Whisper-1 → JSON → SRT
  * 2. GPT-4o → Sprecher­Namen (inkl. Korrekturen aus name-fixes.json)
  * 3. JSON-Export mit Speaker-Tags
  * 4. GPT-4o → Kurz­zusammenfassung (Markdown Bullet-Points)
@@ -237,7 +237,7 @@ async function transkribiere(mp3Pfad) {
 
   const maxSize  = 10 * 1024 * 1024;
   const fileSize = fs.statSync(mp3Pfad).size;
-  console.log('📤  Transkribiere via GPT-4o-mini (JSON → SRT) …');
+  console.log('📤  Transkribiere via Whisper (JSON → SRT) …');
 
   let srtText = '';
 
@@ -272,9 +272,8 @@ async function transkribiere(mp3Pfad) {
       const fullPath = path.join(tmpDir, p);
       const resp = await retryRequest(() => openai.audio.transcriptions.create({
         file: fs.createReadStream(fullPath),
-        model: 'gpt-4o-mini-transcribe',
-        response_format: 'json',
-        timestamp_granularities: ['segment']   // <-- Segmente anfordern
+        model: 'whisper-1',
+        response_format: 'verbose_json'
       }));
 
       // Segmente sicherstellen (Fallback: Ein-Segment mit Länge segmentTime)
@@ -294,9 +293,8 @@ async function transkribiere(mp3Pfad) {
   } else {
     const transcribeResp = await retryRequest(() => openai.audio.transcriptions.create({
       file: fs.createReadStream(mp3Pfad),
-      model: 'gpt-4o-mini-transcribe',
-      response_format: 'json',
-      timestamp_granularities: ['segment']   // <-- Segmente anfordern
+      model: 'whisper-1',
+      response_format: 'verbose_json'
     }));
 
     // Gesamtdauer als Fallback (für Einzelblock)
