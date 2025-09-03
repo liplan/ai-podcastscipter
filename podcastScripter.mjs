@@ -354,9 +354,17 @@ async function transkribiere(mp3Pfad) {
 
   const totalLines = srtJson.length;
   const sampleChunks = [];
-  if (totalLines > 0) sampleChunks.push(srtJson.slice(0, 3));
-  if (totalLines > 6) sampleChunks.push(srtJson.slice(Math.floor(totalLines / 2) - 1, Math.floor(totalLines / 2) + 2));
-  if (totalLines > 9) sampleChunks.push(srtJson.slice(-3));
+  const positions = [0, 0.25, 0.5, 0.75, 1];
+  const linesPerSample = Math.min(5, Math.max(1, Math.floor(totalLines / 20) || 1));
+  const taken = new Set();
+  for (const p of positions) {
+    let idx = Math.floor(totalLines * p);
+    idx = Math.min(Math.max(idx - Math.floor(linesPerSample / 2), 0), Math.max(0, totalLines - linesPerSample));
+    if (!taken.has(idx)) {
+      sampleChunks.push(srtJson.slice(idx, idx + linesPerSample));
+      taken.add(idx);
+    }
+  }
   const sampleLines = sampleChunks
     .map(chunk => chunk.map(e => e.text).join('\n'))
     .join('\n...\n');
@@ -387,7 +395,7 @@ Nur die Namen und Reihenfolge. Falls „Kevin“ vorkommt, ist eigentlich „Gav
   const knownNames = metaSpeakers.length ? metaSpeakers : transcriptNames;
 
   const diarSegments = await diarizeWithDeepgram(mp3Pfad);
-  const speakerSamples = new Map();
+  const speakerEntries = new Map();
   if (diarSegments.length) {
     console.log(`🔍  Diarisierung erfolgreich: ${diarSegments.length} Segmente.`);
     for (const entry of srtJson) {
@@ -395,9 +403,9 @@ Nur die Namen und Reihenfolge. Falls „Kevin“ vorkommt, ist eigentlich „Gav
       const seg = diarSegments.find(d => mid >= d.start && mid <= d.end);
       const id = seg ? seg.speaker : 1;
       entry.speakerId = id;
-      const arr = speakerSamples.get(id) || [];
-      if (arr.join(' ').length < 160) arr.push(entry.text.trim());
-      speakerSamples.set(id, arr);
+      const arr = speakerEntries.get(id) || [];
+      arr.push(entry);
+      speakerEntries.set(id, arr);
     }
   } else {
     console.warn('⚠️  Keine Diarisierungsergebnisse – verwende Rotationslogik.');
@@ -406,11 +414,20 @@ Nur die Namen und Reihenfolge. Falls „Kevin“ vorkommt, ist eigentlich „Gav
     for (const entry of srtJson) {
       const id = ((speakerCounter - 1) % speakerTotal) + 1;
       entry.speakerId = id;
-      const arr = speakerSamples.get(id) || [];
-      if (arr.join(' ').length < 160) arr.push(entry.text.trim());
-      speakerSamples.set(id, arr);
+      const arr = speakerEntries.get(id) || [];
+      arr.push(entry);
+      speakerEntries.set(id, arr);
       speakerCounter++;
     }
+  }
+
+  const speakerSamples = new Map();
+  for (const [id, entries] of speakerEntries.entries()) {
+    const texts = [];
+    if (entries.length > 0) texts.push(entries[0].text.trim());
+    if (entries.length > 2) texts.push(entries[Math.floor(entries.length / 2)].text.trim());
+    if (entries.length > 1) texts.push(entries[entries.length - 1].text.trim());
+    speakerSamples.set(id, texts);
   }
 
   const snippetPrompt = [...speakerSamples.entries()]
@@ -480,7 +497,7 @@ Speaker 2: Name`;
       return `${key}: ${nameMap.get(key) || key}`;
     })
     .join('\n');
-  const finalTxt = `Detected names:\n${gptSpeakerText}\n\nSpeaker mapping:\n${finalSpeakerListText}`;
+  const finalTxt = `Detected names:\n${gptSpeakerText}\n\nSpeaker mapping:\n${finalSpeakerListText}\n\nSamples:\n${snippetPrompt}`;
   fs.writeFileSync(speakerTxtPfad, finalTxt, 'utf-8');
   console.log('📄  Finale Sprecherliste gespeichert →', speakerTxtPfad);
 
