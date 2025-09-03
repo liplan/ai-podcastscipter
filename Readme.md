@@ -60,6 +60,14 @@ Nach der Transkription wird die Kurz­zusammenfassung außerdem automatisch als 
 
 `feeds.json` wird im Projektordner gespeichert und speichert alle jemals eingegebenen Feed-URLs samt Titel. Beim nächsten Start können vorhandene Feeds einfach über ihre Nummer ausgewählt werden.
 
+### Sprecher:innen aus RSS-Feeds
+
+Beim Einlesen eines RSS-Feeds werden vorhandene Namen der Teilnehmer:innen aus Feldern wie `author` oder `dc:creator` extrahiert und in der `metadata.json` der Episode abgelegt. Diese Namen werden bei der Diarisierung verwendet, sodass erkannte Sprechersegmente direkt mit den vollständigen Namen beschriftet werden.
+
+### Datenschutz
+
+Wer keine Klarnamen speichern möchte, kann die Ausgabe über die Umgebungsvariable `ALLOW_SPEAKER_NAMES=false` deaktivieren. In diesem Modus werden alle Sprecher lediglich als `Speaker 1`, `Speaker 2` usw. ausgegeben.
+
 
 ### Direktes Transkribieren von MP3-Dateien
 
