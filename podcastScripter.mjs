@@ -24,11 +24,15 @@ import { fetch as undiciFetch, ProxyAgent, Agent, setGlobalDispatcher } from 'un
 import { getAudioDurationInSeconds } from 'get-audio-duration';
 import { logNetworkError } from './logger.mjs';
 import { Deepgram } from '@deepgram/sdk';
+import { createProfiles } from './rssUtils.mjs';
+import { applySpeakerMapping } from './diarizationMapping.mjs';
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
+
+const ALLOW_SPEAKER_NAMES = process.env.ALLOW_SPEAKER_NAMES !== 'false';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 if (!OPENAI_API_KEY) {
@@ -277,6 +281,7 @@ async function transkribiere(mp3Pfad) {
     try { epMeta = JSON.parse(fs.readFileSync(metaPfad, 'utf-8')); } catch {}
   }
   const metaSpeakers = Array.isArray(epMeta.speakers) ? epMeta.speakers : [];
+  const speakerProfiles = createProfiles(metaSpeakers);
 
   const maxSize  = 10 * 1024 * 1024;
   const fileSize = fs.statSync(mp3Pfad).size;
@@ -384,7 +389,7 @@ Nur die Namen und Reihenfolge. Falls „Kevin“ vorkommt, ist eigentlich „Gav
 
   const matchNames = [...gptSpeakerText.matchAll(/Speaker\s*(\d):\s*([\p{L}\-']+)/giu)];
   const transcriptNames = matchNames.map(([ , , n ]) => n);
-  const knownNames = metaSpeakers.length ? metaSpeakers : transcriptNames;
+  const knownNames = speakerProfiles.length ? speakerProfiles.map(p => p.name) : transcriptNames;
 
   const diarSegments = await diarizeWithDeepgram(mp3Pfad);
   const speakerSamples = new Map();
@@ -460,6 +465,13 @@ Speaker 2: Name`;
     }
   }
 
+  if (!ALLOW_SPEAKER_NAMES) {
+    nameMap = new Map([...speakerSamples.keys()].map(id => {
+      const key = `Speaker ${id}`;
+      return [key, key];
+    }));
+  }
+
   const fixPfad = path.join(__dirname, 'name-fixes.json');
   let fixes = {};
   if (fs.existsSync(fixPfad)) {
@@ -487,16 +499,14 @@ Speaker 2: Name`;
   console.log('\n🎙️  Finale Sprecherliste:');
   for (const [key, val] of nameMap.entries()) console.log(`  ${key} → ${val}`);
 
-  for (const entry of srtJson) {
-    const spKey = `Speaker ${entry.speakerId}`;
-    entry.speaker = nameMap.get(spKey) || spKey;
-  }
+  const mappedEntries = applySpeakerMapping(srtJson, nameMap, metaSpeakers, ALLOW_SPEAKER_NAMES);
 
-  const jsonOut = srtJson.map(e => ({
-    start:   e.startTime,
-    end:     e.endTime,
+  const jsonOut = mappedEntries.map(e => ({
+    start: e.startTime,
+    end: e.endTime,
     speaker: e.speaker,
-    text:    e.text.trim()
+    confidence: e.confidence,
+    text: e.text.trim()
   }));
 
   fs.writeFileSync(jsonPfad, JSON.stringify(jsonOut, null, 2), 'utf-8');

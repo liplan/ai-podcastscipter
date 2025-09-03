@@ -8,6 +8,7 @@ import fetch from 'node-fetch';
 import { getAudioDurationInSeconds } from 'get-audio-duration';
 import { spawn } from 'child_process';
 import { handleNetworkError, describeNetworkError, logError } from './logger.mjs';
+import { extractSpeakers, createProfiles } from './rssUtils.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -118,20 +119,6 @@ async function selectFeed() {
   return url;
 }
 
-function extractSpeakers(item) {
-  const fields = [
-    item.itunes?.author,
-    item['itunes:author'],
-    item.author,
-    item['dc:creator']
-  ].filter(Boolean);
-  if (item.content) {
-    const match = item.content.match(/(?:mit|with)\s+([^<\n]+)/i);
-    if (match) fields.push(match[1]);
-  }
-  return [...new Set(fields.flatMap(f => f.split(/,| und | & | and /).map(s => s.trim())))].filter(Boolean);
-}
-
 async function fetchEpisodes(feedUrl) {
   const parser = new Parser();
   let feed;
@@ -153,7 +140,10 @@ async function fetchEpisodes(feedUrl) {
   }
   const episodes = feed.items.map(item => {
     const speakers = extractSpeakers(item);
-    if (speakers.length) item.speakers = speakers;
+    if (speakers.length) {
+      item.speakers = speakers;
+      item.speakerProfiles = createProfiles(speakers);
+    }
     return {
       title: item.title,
       url: item.enclosure?.url,
