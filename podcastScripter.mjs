@@ -282,6 +282,14 @@ async function transkribiere(mp3Pfad) {
   }
   const metaSpeakers = Array.isArray(epMeta.speakers) ? epMeta.speakers : [];
   const speakerProfiles = createProfiles(metaSpeakers);
+  const metaInfo = [];
+  if (epMeta.title) metaInfo.push(`Titel: ${epMeta.title}`);
+  const author = epMeta.itunes?.author || epMeta['itunes:author'] || epMeta.author || epMeta['dc:creator'];
+  if (author) metaInfo.push(`Autor: ${author}`);
+  const descr = (epMeta.content || epMeta.description || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+  if (descr) metaInfo.push(`Beschreibung: ${descr.slice(0, 500)}`);
+  if (metaSpeakers.length) metaInfo.push(`Mögliche Sprecher: ${metaSpeakers.join(', ')}`);
+  const rssMetaText = metaInfo.join('\n');
 
   const maxSize  = 10 * 1024 * 1024;
   const fileSize = fs.statSync(mp3Pfad).size;
@@ -373,17 +381,17 @@ async function transkribiere(mp3Pfad) {
   const sampleLines = sampleChunks
     .map(chunk => chunk.map(e => e.text).join('\n'))
     .join('\n...\n');
-  const gptSpeakerPrompt =
-`Hier sind mehrere Auszüge eines Podcast-Transkripts:
+  const gptSpeakerPrompt = `Nutze die folgenden RSS-Metadaten und Transkript-Auszüge, um die Sprecher dieses Podcasts zu erkennen.
+RSS:
+${rssMetaText}
 
+Transkript:
 ${sampleLines}
 
-Welche Namen kommen vor? Wer begrüßt wen? Gib eine Liste wie:
-
-Speaker 1: Dennis
-Speaker 2: Gavin
-
-Nur die Namen und Reihenfolge. Falls „Kevin“ vorkommt, ist eigentlich „Gavin“ gemeint.`;
+Gib eine Liste wie:
+Speaker 1: Name
+Speaker 2: Name
+Nur die Namen, keine Kommentare.`;
 
   console.log('🤖  Frage GPT-4o nach Sprechern …');
   const speakerRes = await retryRequest(() => openai.responses.create({
@@ -395,8 +403,11 @@ Nur die Namen und Reihenfolge. Falls „Kevin“ vorkommt, ist eigentlich „Gav
   const gptSpeakerText = speakerRes.output_text.trim();
   console.log('📄  GPT-Antwort erhalten.');
 
-  const matchNames = [...gptSpeakerText.matchAll(/Speaker\s*(\d):\s*([\p{L}\-']+)/giu)];
-  const transcriptNames = matchNames.map(([ , , n ]) => n);
+  const matchNames = [...gptSpeakerText.matchAll(/Speaker\s*(\d):\s*([^\n]+)/giu)];
+  const transcriptNames = matchNames
+    .map(([ , , n ]) => n)
+    .map(n => n.replace(/https?:\S+/gi, '').replace(/[^\p{L}\s'-]/gu, '').trim())
+    .filter(n => n && n.split(/\s+/).length <= 3);
   const knownNames = speakerProfiles.length ? speakerProfiles.map(p => p.name) : transcriptNames;
 
   const diarSegments = await diarizeWithDeepgram(mp3Pfad);
@@ -438,9 +449,11 @@ Nur die Namen und Reihenfolge. Falls „Kevin“ vorkommt, ist eigentlich „Gav
   const snippetPrompt = [...speakerSamples.entries()]
     .map(([id, lines]) => `Speaker ${id}: ${lines.join(' ')}`)
     .join('\n');
-  const speakerPrompt2 =
-`Bekannte Sprecher in diesem Podcast: ${knownNames.join(', ')}.
-Ordne den folgenden Redeausschnitten den passenden Namen zu:
+  const speakerPrompt2 = `Nutze die folgenden RSS-Metadaten und Redeausschnitte, um den Sprecher-IDs Namen zuzuordnen.
+RSS:
+${rssMetaText || 'Keine Metadaten'}
+
+Bekannte Sprecher: ${knownNames.join(', ') || 'keine'}
 
 ${snippetPrompt}
 
