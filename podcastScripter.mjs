@@ -26,6 +26,7 @@ import { logNetworkError } from './logger.mjs';
 import { Deepgram } from '@deepgram/sdk';
 import { createProfiles } from './rssUtils.mjs';
 import { applySpeakerMapping } from './diarizationMapping.mjs';
+import { assignSpeakersWithoutDiarization } from './speakerAssignment.mjs';
 
 dotenv.config();
 
@@ -411,30 +412,23 @@ Nur die Namen, keine Kommentare.`;
   const knownNames = speakerProfiles.length ? speakerProfiles.map(p => p.name) : transcriptNames;
 
   const diarSegments = await diarizeWithDeepgram(mp3Pfad);
-  const speakerEntries = new Map();
+  let speakerEntries;
   if (diarSegments.length) {
     console.log(`🔍  Diarisierung erfolgreich: ${diarSegments.length} Segmente.`);
+    const diarMap = new Map();
     for (const entry of srtJson) {
       const mid = (srtTimeToSeconds(entry.startTime) + srtTimeToSeconds(entry.endTime)) / 2;
       const seg = diarSegments.find(d => mid >= d.start && mid <= d.end);
       const id = seg ? seg.speaker : 1;
       entry.speakerId = id;
-      const arr = speakerEntries.get(id) || [];
+      const arr = diarMap.get(id) || [];
       arr.push(entry);
-      speakerEntries.set(id, arr);
+      diarMap.set(id, arr);
     }
+    speakerEntries = diarMap;
   } else {
     console.warn('⚠️  Keine Diarisierungsergebnisse – verwende Rotationslogik.');
-    let speakerCounter = 1;
-    const speakerTotal = knownNames.length || 2;
-    for (const entry of srtJson) {
-      const id = ((speakerCounter - 1) % speakerTotal) + 1;
-      entry.speakerId = id;
-      const arr = speakerEntries.get(id) || [];
-      arr.push(entry);
-      speakerEntries.set(id, arr);
-      speakerCounter++;
-    }
+    speakerEntries = assignSpeakersWithoutDiarization(srtJson, knownNames);
   }
 
   const speakerSamples = new Map();
