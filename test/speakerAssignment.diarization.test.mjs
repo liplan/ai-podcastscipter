@@ -49,4 +49,25 @@ const entries3 = JSON.parse(JSON.stringify(gapEntries));
 assignSpeakersFromDiarization(entries3, gapSegments, 2);
 assert.deepStrictEqual(entries3.map(e => e.speakerId), [1, 2]);
 
+const guardEntries = [
+  { startTime: '00:00:00,000', endTime: '00:00:02,000', text: 'Guard A' },
+  { startTime: '00:00:02,000', endTime: '00:00:04,000', text: 'Guard B' }
+];
+
+const guardSegments = [
+  { start: 0, end: 2, speaker: 1 },
+  { start: 2, end: 4, speaker: 2 }
+];
+
+const diarSpeakerCount = new Set(guardSegments.map(seg => seg.speaker)).size;
+let expectedFromGuard = Math.max(0, 0, diarSpeakerCount);
+if (diarSpeakerCount > 1 && expectedFromGuard < 2) {
+  expectedFromGuard = 2;
+}
+
+assert.strictEqual(expectedFromGuard, 2);
+const entries4 = JSON.parse(JSON.stringify(guardEntries));
+const map4 = assignSpeakersFromDiarization(entries4, guardSegments, expectedFromGuard);
+assert.strictEqual(map4.size, 2);
+
 console.log('speakerAssignment diarization tests passed');
