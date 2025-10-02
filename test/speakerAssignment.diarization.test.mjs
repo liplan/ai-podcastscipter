@@ -26,7 +26,7 @@ const multiSpeakerEntries = [
 const noisySegments = [
   { start: 0, end: 3.1, speaker: 1 },
   { start: 3.1, end: 6.2, speaker: 2 },
-  { start: 6.2, end: 9.3, speaker: 3 }
+  { start: 6.15, end: 6.25, speaker: 3 }
 ];
 
 const entries2 = JSON.parse(JSON.stringify(multiSpeakerEntries));
@@ -69,5 +69,35 @@ assert.strictEqual(expectedFromGuard, 2);
 const entries4 = JSON.parse(JSON.stringify(guardEntries));
 const map4 = assignSpeakersFromDiarization(entries4, guardSegments, expectedFromGuard);
 assert.strictEqual(map4.size, 2);
+
+const uncoveredEntries = [
+  { startTime: '00:00:00,000', endTime: '00:00:01,000', text: 'Left' },
+  { startTime: '00:00:02,000', endTime: '00:00:03,000', text: 'Right' }
+];
+
+const uncoveredSegments = [
+  { start: 0, end: 1, speaker: 1 },
+  { start: 2, end: 3, speaker: 2 }
+];
+
+const entries5 = JSON.parse(JSON.stringify(uncoveredEntries));
+const map5 = assignSpeakersFromDiarization(entries5, uncoveredSegments, 1);
+assert.strictEqual(map5.size, 2);
+assert.deepStrictEqual(entries5.map(e => e.speakerId), [1, 2]);
+
+const overlappingEntries = [
+  { startTime: '00:00:00,000', endTime: '00:00:01,000', text: 'Intro' },
+  { startTime: '00:00:03,000', endTime: '00:00:07,000', text: 'Interview' }
+];
+
+const overlappingSegments = [
+  { start: 0, end: 10, speaker: 2 },
+  { start: 2, end: 8, speaker: 1 }
+];
+
+const entries6 = JSON.parse(JSON.stringify(overlappingEntries));
+const map6 = assignSpeakersFromDiarization(entries6, overlappingSegments, 1);
+assert.strictEqual(map6.size, 2);
+assert.deepStrictEqual(entries6.map(e => e.speakerId), [1, 2]);
 
 console.log('speakerAssignment diarization tests passed');
