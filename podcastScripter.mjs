@@ -431,7 +431,21 @@ Nur die Namen, keine Kommentare.`;
   const knownNames = speakerProfiles.length ? speakerProfiles.map(p => p.name) : transcriptNames;
 
   const diarSegments = await diarizeWithDeepgram(mp3Pfad);
-  const expectedSpeakers = metaSpeakers.length || knownNames.length;
+  const diarSpeakerCount = new Set(
+    diarSegments
+      .map(seg => Number(seg?.speaker))
+      .filter(id => Number.isFinite(id) && id > 0)
+  ).size;
+
+  let expectedSpeakers = Math.max(
+    metaSpeakers.length,
+    knownNames.length,
+    diarSpeakerCount
+  );
+
+  if (diarSpeakerCount > 1 && expectedSpeakers < 2) {
+    expectedSpeakers = 2;
+  }
   let speakerEntries = new Map();
   if (diarSegments.length) {
     console.log(`🔍  Diarisierung erfolgreich: ${diarSegments.length} Segmente.`);
