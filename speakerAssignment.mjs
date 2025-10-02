@@ -1,5 +1,52 @@
 const MERGE_GAP_SECONDS = 0.35;
 
+function parseSpeakerIdentifier(value) {
+  if (value === null || value === undefined) return null;
+
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  const text = String(value).trim();
+  if (!text) return null;
+
+  const directNumeric = text.match(/^[+-]?\d+$/);
+  if (directNumeric) {
+    const parsed = Number.parseInt(text, 10);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  const labeledMatch = text.match(/speaker[_\s-]*(\d+)/i);
+  if (labeledMatch) {
+    const parsed = Number.parseInt(labeledMatch[1], 10);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  const alphaMatch = text.match(/^[A-Za-z]+$/);
+  if (alphaMatch) {
+    let valueAccumulator = 0;
+    for (const ch of text.toUpperCase()) {
+      const code = ch.charCodeAt(0);
+      if (code < 65 || code > 90) {
+        return null;
+      }
+      valueAccumulator = valueAccumulator * 26 + (code - 64);
+    }
+    return valueAccumulator;
+  }
+
+  const fallback = Number(text);
+  return Number.isFinite(fallback) ? fallback : null;
+}
+
+function toZeroBasedSpeaker(value) {
+  if (!Number.isFinite(value)) return 0;
+  if (value > 0) {
+    return Math.max(0, Math.floor(value - 1));
+  }
+  return Math.max(0, Math.floor(value));
+}
+
 function parseSrtTimestamp(ts) {
   if (ts === null || ts === undefined) return NaN;
 
@@ -441,8 +488,9 @@ export function assignSpeakersFromDiarization(srtJson = [], diarSegments = [], e
     .map(seg => {
       const start = Number(seg.start);
       const end = Number(seg.end);
-      const rawSpeaker = Number(seg.speaker ?? seg.speaker_id ?? seg.speakerId ?? 0);
-      const speaker = Number.isFinite(rawSpeaker) && rawSpeaker > 0 ? rawSpeaker - 1 : 0;
+      const source = seg.speaker ?? seg.speaker_id ?? seg.speakerId ?? 0;
+      const parsed = parseSpeakerIdentifier(source);
+      const speaker = toZeroBasedSpeaker(parsed ?? Number(source));
       return { start, end, speaker };
     })
     .filter(seg => Number.isFinite(seg.start) && Number.isFinite(seg.end) && seg.end > seg.start)
