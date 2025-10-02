@@ -26,16 +26,20 @@ function mergeSegments(segments = []) {
 
 function limitSegmentsToExpected(segments = [], expectedSpeakers = 0) {
   const expected = Number.isFinite(expectedSpeakers) ? Math.max(0, Math.floor(expectedSpeakers)) : 0;
-  if (expected === 0) return segments.map(seg => ({ ...seg }));
+  const cloneOriginal = () => segments.map(seg => ({ ...seg }));
+  if (expected === 0) return cloneOriginal();
 
   const durationBySpeaker = new Map();
+  let totalDuration = 0;
   for (const seg of segments) {
+    const duration = seg.end - seg.start;
+    totalDuration += duration;
     const current = durationBySpeaker.get(seg.speaker) || 0;
-    durationBySpeaker.set(seg.speaker, current + (seg.end - seg.start));
+    durationBySpeaker.set(seg.speaker, current + duration);
   }
 
   if (durationBySpeaker.size <= expected) {
-    return segments.map(seg => ({ ...seg }));
+    return cloneOriginal();
   }
 
   const keepSpeakers = [...durationBySpeaker.entries()]
@@ -46,7 +50,27 @@ function limitSegmentsToExpected(segments = [], expectedSpeakers = 0) {
   const keepSet = new Set(keepSpeakers);
   const keepSegments = segments.filter(seg => keepSet.has(seg.speaker));
   if (!keepSegments.length) {
-    return segments.map(seg => ({ ...seg }));
+    return cloneOriginal();
+  }
+
+  const hasUncoveredIntervals = segments.some(seg => {
+    if (keepSet.has(seg.speaker)) return false;
+    const duration = seg.end - seg.start;
+    let covered = 0;
+    for (const target of keepSegments) {
+      const overlap = Math.min(seg.end, target.end) - Math.max(seg.start, target.start);
+      if (overlap > 0) {
+        covered += overlap;
+        if (covered >= duration - 1e-6) {
+          return false;
+        }
+      }
+    }
+    return covered < duration - 1e-6;
+  });
+
+  if (hasUncoveredIntervals) {
+    return cloneOriginal();
   }
 
   const reassigned = segments.map(seg => {
@@ -72,6 +96,23 @@ function limitSegmentsToExpected(segments = [], expectedSpeakers = 0) {
 
     return { ...seg, speaker: bestSpeaker };
   });
+
+  const reducedCoverageBySpeaker = new Map();
+  for (const seg of reassigned) {
+    const duration = seg.end - seg.start;
+    reducedCoverageBySpeaker.set(seg.speaker, (reducedCoverageBySpeaker.get(seg.speaker) || 0) + duration);
+  }
+
+  const significantThreshold = totalDuration * 0.2;
+  const lostSignificantSpeaker = significantThreshold > 0 && [...durationBySpeaker.entries()].some(([speaker, originalDuration]) => {
+    if (originalDuration < significantThreshold) return false;
+    const reducedDuration = reducedCoverageBySpeaker.get(speaker) || 0;
+    return reducedDuration <= 1e-6;
+  });
+
+  if (lostSignificantSpeaker) {
+    return cloneOriginal();
+  }
 
   reassigned.sort((a, b) => a.start - b.start || a.speaker - b.speaker);
   return mergeSegments(reassigned);
