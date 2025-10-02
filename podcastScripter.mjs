@@ -23,7 +23,7 @@ import dotenv from 'dotenv';
 import { fetch as undiciFetch, ProxyAgent, Agent, setGlobalDispatcher } from 'undici';
 import { getAudioDurationInSeconds } from 'get-audio-duration';
 import { logNetworkError } from './logger.mjs';
-import { Deepgram } from '@deepgram/sdk';
+import { createClient as createDeepgramClient } from '@deepgram/sdk';
 import { createProfiles } from './rssUtils.mjs';
 import { applySpeakerMapping } from './diarizationMapping.mjs';
 import { assignSpeakersWithoutDiarization, assignSpeakersFromDiarization } from './speakerAssignment.mjs';
@@ -121,14 +121,17 @@ async function diarizeWithDeepgram(mp3Pfad) {
     console.warn('⚠️  Kein DEEPGRAM_API_KEY gesetzt – überspringe Diarisierung.');
     return [];
   }
-  const dg = new Deepgram(DG_API_KEY);
+  const dg = createDeepgramClient(DG_API_KEY);
   try {
-    const source = {
-      buffer: fs.readFileSync(mp3Pfad),
-      mimetype: 'audio/mpeg'
-    };
-    const dgRes = await dg.transcription.preRecorded(source, { diarize: true, punctuate: false });
-    const words = dgRes?.results?.channels?.[0]?.alternatives?.[0]?.words || [];
+    const audioBuffer = fs.readFileSync(mp3Pfad);
+    const { result, error } = await dg.listen.prerecorded.transcribeFile(audioBuffer, {
+      diarize: true,
+      punctuate: false,
+    });
+
+    if (error) throw error;
+
+    const words = result?.results?.channels?.[0]?.alternatives?.[0]?.words || [];
     if (!words.length) return [];
     const parseSpeakerIdentifier = (value) => {
       if (value === null || value === undefined) return null;
