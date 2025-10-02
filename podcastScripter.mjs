@@ -26,7 +26,7 @@ import { logNetworkError } from './logger.mjs';
 import { Deepgram } from '@deepgram/sdk';
 import { createProfiles } from './rssUtils.mjs';
 import { applySpeakerMapping } from './diarizationMapping.mjs';
-import { assignSpeakersWithoutDiarization } from './speakerAssignment.mjs';
+import { assignSpeakersWithoutDiarization, assignSpeakersFromDiarization } from './speakerAssignment.mjs';
 
 dotenv.config();
 
@@ -133,16 +133,35 @@ async function diarizeWithDeepgram(mp3Pfad) {
     const segments = [];
     let current = null;
     for (const w of words) {
-      const sp = Number(w.speaker ?? w.speaker_id ?? 0) + 1; // 1-basiert
-      if (!current || current.speaker !== sp) {
+      const speakerRaw = Number(w.speaker ?? w.speaker_id ?? 0);
+      const speaker = Number.isFinite(speakerRaw) ? speakerRaw : 0;
+      const start = Number(w.start);
+      const end = Number(w.end);
+      if (!Number.isFinite(start) || !Number.isFinite(end)) continue;
+      if (!current || current.speaker !== speaker) {
         if (current) segments.push(current);
-        current = { start: w.start, end: w.end, speaker: sp };
+        current = { start, end, speaker };
       } else {
-        current.end = w.end;
+        current.end = Math.max(current.end, end);
       }
     }
     if (current) segments.push(current);
-    return segments;
+    segments.sort((a, b) => a.start - b.start || a.speaker - b.speaker);
+    const merged = [];
+    const mergeGap = 0.35;
+    for (const seg of segments) {
+      const last = merged[merged.length - 1];
+      if (last && last.speaker === seg.speaker && seg.start <= last.end + mergeGap) {
+        last.end = Math.max(last.end, seg.end);
+      } else {
+        merged.push({ ...seg });
+      }
+    }
+    return merged.map(seg => ({
+      start: seg.start,
+      end: seg.end,
+      speaker: seg.speaker + 1,
+    }));
   } catch (err) {
     console.warn('⚠️  Deepgram-Diarisierung fehlgeschlagen:', err.message);
     return [];
@@ -282,7 +301,7 @@ async function transkribiere(mp3Pfad) {
     try { epMeta = JSON.parse(fs.readFileSync(metaPfad, 'utf-8')); } catch {}
   }
   const metaSpeakers = Array.isArray(epMeta.speakers) ? epMeta.speakers : [];
-  const speakerProfiles = createProfiles(metaSpeakers);
+  const speakerProfiles = createProfiles(metaSpeakers, epMeta.speakerProfiles);
   const metaInfo = [];
   if (epMeta.title) metaInfo.push(`Titel: ${epMeta.title}`);
   const author = epMeta.itunes?.author || epMeta['itunes:author'] || epMeta.author || epMeta['dc:creator'];
@@ -412,22 +431,18 @@ Nur die Namen, keine Kommentare.`;
   const knownNames = speakerProfiles.length ? speakerProfiles.map(p => p.name) : transcriptNames;
 
   const diarSegments = await diarizeWithDeepgram(mp3Pfad);
-  let speakerEntries;
+  const expectedSpeakers = metaSpeakers.length || knownNames.length;
+  let speakerEntries = new Map();
   if (diarSegments.length) {
     console.log(`🔍  Diarisierung erfolgreich: ${diarSegments.length} Segmente.`);
-    const diarMap = new Map();
-    for (const entry of srtJson) {
-      const mid = (srtTimeToSeconds(entry.startTime) + srtTimeToSeconds(entry.endTime)) / 2;
-      const seg = diarSegments.find(d => mid >= d.start && mid <= d.end);
-      const id = seg ? seg.speaker : 1;
-      entry.speakerId = id;
-      const arr = diarMap.get(id) || [];
-      arr.push(entry);
-      diarMap.set(id, arr);
+    speakerEntries = assignSpeakersFromDiarization(srtJson, diarSegments, expectedSpeakers);
+  }
+  if (!speakerEntries.size) {
+    if (diarSegments.length) {
+      console.warn('⚠️  Diarisierung lieferte keine verwertbare Zuordnung – verwende Rotationslogik.');
+    } else {
+      console.warn('⚠️  Keine Diarisierungsergebnisse – verwende Rotationslogik.');
     }
-    speakerEntries = diarMap;
-  } else {
-    console.warn('⚠️  Keine Diarisierungsergebnisse – verwende Rotationslogik.');
     speakerEntries = assignSpeakersWithoutDiarization(srtJson, knownNames);
   }
 

@@ -3,17 +3,27 @@ import { extractSpeakers, createProfiles } from '../rssUtils.mjs';
 
 const item = {
   author: 'Alice, Bob',
-  content: 'Ein Gespräch mit Alice & Carol'
+  content: 'Ein Gespräch mit Alice & Carol',
+  speakers: ['Gavin Karlmeier', 'Alice'],
+  speakerProfiles: [
+    { name: 'Gavin Karlmeier', trained: true },
+    { name: 'Eve Example', trained: false }
+  ],
 };
 
 const names = extractSpeakers(item);
-assert.deepStrictEqual(names.sort(), ['Alice','Bob','Carol'].sort());
+assert.deepStrictEqual(
+  names.sort(),
+  ['Alice', 'Bob', 'Carol', 'Eve Example', 'Gavin Karlmeier'].sort()
+);
 
-const profiles = createProfiles(names);
+const profiles = createProfiles(names, item.speakerProfiles);
 assert.deepStrictEqual(profiles, [
-  { name: 'Alice', trained: false },
-  { name: 'Bob', trained: false },
-  { name: 'Carol', trained: false }
+  { name: 'Gavin Karlmeier', trained: true },
+  { name: 'Eve Example', trained: false }
 ]);
+
+const fallbackProfiles = createProfiles(names);
+assert.deepStrictEqual(fallbackProfiles, names.map(name => ({ name, trained: false })));
 
 console.log('rssUtils tests passed');
