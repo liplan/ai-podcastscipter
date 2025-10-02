@@ -130,4 +130,19 @@ const map8 = assignSpeakersFromDiarization(entries8, boundarySegments, 2);
 assert.strictEqual(map8.size, 2);
 assert.strictEqual(new Set(entries8.map(e => e.speakerId)).size, 2);
 
+const labeledStringEntries = [
+  { startTime: '00:00:00,000', endTime: '00:00:04,000', text: 'Label host' },
+  { startTime: '00:00:04,000', endTime: '00:00:08,000', text: 'Label guest' },
+];
+
+const labeledStringSegments = [
+  { start: 0, end: 4, speaker: 'speaker_1' },
+  { start: 4, end: 8, speaker: 'speaker_2' },
+];
+
+const entries9 = JSON.parse(JSON.stringify(labeledStringEntries));
+const map9 = assignSpeakersFromDiarization(entries9, labeledStringSegments, 2);
+assert.strictEqual(map9.size, 2);
+assert.strictEqual(new Set(entries9.map(e => e.speakerId)).size, 2);
+
 console.log('speakerAssignment diarization tests passed');

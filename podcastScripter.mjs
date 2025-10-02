@@ -130,11 +130,59 @@ async function diarizeWithDeepgram(mp3Pfad) {
     const dgRes = await dg.transcription.preRecorded(source, { diarize: true, punctuate: false });
     const words = dgRes?.results?.channels?.[0]?.alternatives?.[0]?.words || [];
     if (!words.length) return [];
+    const parseSpeakerIdentifier = (value) => {
+      if (value === null || value === undefined) return null;
+      if (typeof value === 'number') {
+        return Number.isFinite(value) ? value : null;
+      }
+
+      const text = String(value).trim();
+      if (!text) return null;
+
+      const directNumeric = text.match(/^[+-]?\d+$/);
+      if (directNumeric) {
+        const parsed = Number.parseInt(text, 10);
+        return Number.isFinite(parsed) ? parsed : null;
+      }
+
+      const labeledMatch = text.match(/speaker[_\s-]*(\d+)/i);
+      if (labeledMatch) {
+        const parsed = Number.parseInt(labeledMatch[1], 10);
+        return Number.isFinite(parsed) ? parsed : null;
+      }
+
+      const alphaMatch = text.match(/^[A-Za-z]+$/);
+      if (alphaMatch) {
+        let valueAccumulator = 0;
+        for (const ch of text.toUpperCase()) {
+          const code = ch.charCodeAt(0);
+          if (code < 65 || code > 90) {
+            return null;
+          }
+          valueAccumulator = valueAccumulator * 26 + (code - 64);
+        }
+        return valueAccumulator;
+      }
+
+      const fallback = Number(text);
+      return Number.isFinite(fallback) ? fallback : null;
+    };
+
+    const toZeroBasedSpeaker = (value) => {
+      if (!Number.isFinite(value)) return 0;
+      if (value > 0) {
+        return Math.max(0, Math.floor(value - 1));
+      }
+      return Math.max(0, Math.floor(value));
+    };
+
     const segments = [];
     let current = null;
     for (const w of words) {
-      const speakerRaw = Number(w.speaker ?? w.speaker_id ?? 0);
-      const speaker = Number.isFinite(speakerRaw) ? speakerRaw : 0;
+      const label = w.speaker ?? w.speaker_id ?? w.speaker_label ?? w.speakerId;
+      const rawSpeaker = parseSpeakerIdentifier(label);
+      const fallback = Number(label ?? 0);
+      const speaker = toZeroBasedSpeaker(rawSpeaker ?? fallback);
       const start = Number(w.start);
       const end = Number(w.end);
       if (!Number.isFinite(start) || !Number.isFinite(end)) continue;
