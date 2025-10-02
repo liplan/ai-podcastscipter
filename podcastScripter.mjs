@@ -543,30 +543,90 @@ Speaker 2: Name`;
   }));
   const assignText = assignRes.output_text.trim();
 
-  const matchIdNames = [...assignText.matchAll(/Speaker\s*(\d+):\s*([\p{L}\-']+)/giu)];
+  const normalizeName = (value) => String(value || '')
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const allKnownCandidates = Array.from(new Set([
+    ...metaSpeakers,
+    ...knownNames,
+  ].map(name => String(name || '').trim()))).filter(Boolean);
+
+  const resolveFullName = (rawName) => {
+    const cleanRaw = String(rawName || '').trim();
+    const normalizedRaw = normalizeName(cleanRaw);
+    if (!normalizedRaw) return cleanRaw;
+
+    const rawWords = normalizedRaw.split(' ').filter(Boolean);
+    if (!rawWords.length) return cleanRaw;
+
+    let bestMatch = null;
+    let bestScore = 0;
+
+    for (const candidate of allKnownCandidates) {
+      const normalizedCandidate = normalizeName(candidate);
+      if (!normalizedCandidate) continue;
+
+      if (normalizedCandidate === normalizedRaw) {
+        const score = normalizedCandidate.split(' ').length * 10;
+        if (score > bestScore || (score === bestScore && candidate.length > (bestMatch?.length || 0))) {
+          bestMatch = candidate;
+          bestScore = score;
+        }
+        continue;
+      }
+
+      const candidateWords = normalizedCandidate.split(' ').filter(Boolean);
+      if (!candidateWords.length) continue;
+
+      const shared = rawWords.filter(word => candidateWords.includes(word)).length;
+      if (!shared) continue;
+
+      const score = shared * 10 + candidateWords.length;
+      if (score > bestScore || (Math.abs(score - bestScore) <= 1e-6 && candidate.length > (bestMatch?.length || 0))) {
+        bestMatch = candidate;
+        bestScore = score;
+      }
+    }
+
+    return bestMatch || cleanRaw;
+  };
+
+  const matchIdNames = [...assignText.matchAll(/Speaker\s*(\d+):\s*([\p{L}\s.'-]+)/giu)];
   let nameMap = new Map();
   if (matchIdNames.length) {
     for (const [ , id, name ] of matchIdNames) {
-      let finalName = name;
-      if (metaSpeakers.length) {
-        const full = metaSpeakers.find(s => s.toLowerCase().includes(name.toLowerCase()));
-        if (full) finalName = full;
+      const finalName = resolveFullName(name);
+      if (finalName) {
+        nameMap.set(`Speaker ${id}`, finalName);
       }
-      nameMap.set(`Speaker ${id}`, finalName);
     }
   }
-  for (const sp of metaSpeakers) {
-    if (![...nameMap.values()].some(n => n === sp)) {
-      const nextId = [...speakerSamples.keys()].find(id => !nameMap.has(`Speaker ${id}`));
-      if (nextId !== undefined) nameMap.set(`Speaker ${nextId}`, sp);
-    }
-  }
-  let idx = 0;
-  for (const id of speakerSamples.keys()) {
+
+  const usedNames = new Set([...nameMap.values()].map(normalizeName));
+  const availableKnown = allKnownCandidates
+    .map(resolveFullName)
+    .filter(name => name && !usedNames.has(normalizeName(name)));
+  const transcriptQueue = transcriptNames
+    .map(resolveFullName)
+    .filter(name => name && !usedNames.has(normalizeName(name)));
+
+  for (const id of [...speakerSamples.keys()].sort((a, b) => a - b)) {
     const key = `Speaker ${id}`;
-    if (!nameMap.has(key) && transcriptNames[idx]) {
-      nameMap.set(key, transcriptNames[idx++]);
+    if (nameMap.has(key)) continue;
+
+    let candidate = availableKnown.shift();
+    if (!candidate) {
+      candidate = transcriptQueue.shift();
     }
+    if (!candidate) {
+      candidate = key;
+    }
+
+    nameMap.set(key, candidate);
+    usedNames.add(normalizeName(candidate));
   }
 
   if (!ALLOW_SPEAKER_NAMES) {
