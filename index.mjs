@@ -142,7 +142,7 @@ async function fetchEpisodes(feedUrl) {
     const speakers = extractSpeakers(item);
     if (speakers.length) {
       item.speakers = speakers;
-      item.speakerProfiles = createProfiles(speakers);
+      item.speakerProfiles = createProfiles(speakers, item.speakerProfiles);
     }
     return {
       title: item.title,
