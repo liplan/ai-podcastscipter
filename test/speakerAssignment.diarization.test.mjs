@@ -100,4 +100,34 @@ const map6 = assignSpeakersFromDiarization(entries6, overlappingSegments, 1);
 assert.strictEqual(map6.size, 2);
 assert.deepStrictEqual(entries6.map(e => e.speakerId), [1, 2]);
 
+const numericEntries = [
+  { startTime: 0, endTime: 4, text: 'Numeric intro' },
+  { startTime: 4, endTime: 8, text: 'Numeric guest' },
+];
+
+const numericSegments = [
+  { start: 0, end: 4.01, speaker: 1 },
+  { start: 4.01, end: 8, speaker: 2 },
+];
+
+const entries7 = JSON.parse(JSON.stringify(numericEntries));
+const map7 = assignSpeakersFromDiarization(entries7, numericSegments, 2);
+assert.strictEqual(map7.size, 2);
+assert.deepStrictEqual(entries7.map(e => e.speakerId), [1, 2]);
+
+const boundaryEntries = [
+  { startTime: '00:00:01,950', endTime: '00:00:02,050', text: 'Edge host' },
+  { startTime: '00:00:02,150', endTime: '00:00:02,250', text: 'Edge guest' },
+];
+
+const boundarySegments = [
+  { start: 0, end: 2, speaker: 1 },
+  { start: 2.3, end: 4, speaker: 2 },
+];
+
+const entries8 = JSON.parse(JSON.stringify(boundaryEntries));
+const map8 = assignSpeakersFromDiarization(entries8, boundarySegments, 2);
+assert.strictEqual(map8.size, 2);
+assert.strictEqual(new Set(entries8.map(e => e.speakerId)).size, 2);
+
 console.log('speakerAssignment diarization tests passed');

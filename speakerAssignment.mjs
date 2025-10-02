@@ -1,14 +1,245 @@
 const MERGE_GAP_SECONDS = 0.35;
 
 function parseSrtTimestamp(ts) {
-  if (!ts) return NaN;
-  const [hms, ms] = String(ts).split(',');
-  if (!hms) return NaN;
-  const [h, m, s] = hms.split(':').map(Number);
-  const millis = ms !== undefined ? Number(ms) : 0;
-  if ([h, m, s].some(Number.isNaN)) return NaN;
-  const base = (h * 3600) + (m * 60) + s;
-  return base + (Number.isNaN(millis) ? 0 : millis / 1000);
+  if (ts === null || ts === undefined) return NaN;
+
+  if (typeof ts === 'number') {
+    return Number.isFinite(ts) ? ts : NaN;
+  }
+
+  if (typeof ts !== 'string') {
+    return NaN;
+  }
+
+  const trimmed = ts.trim();
+  if (!trimmed) return NaN;
+
+  const colonMatch = trimmed.match(/^(-)?(\d{1,2}):(\d{2}):(\d{2})([.,](\d{1,3}))?$/);
+  if (colonMatch) {
+    const sign = colonMatch[1] === '-' ? -1 : 1;
+    const h = Number(colonMatch[2]);
+    const m = Number(colonMatch[3]);
+    const s = Number(colonMatch[4]);
+    if ([h, m, s].some(Number.isNaN)) return NaN;
+    const fracRaw = colonMatch[6] || '';
+    const millis = fracRaw ? Number((fracRaw + '000').slice(0, 3)) : 0;
+    if (Number.isNaN(millis)) return NaN;
+    const base = (h * 3600) + (m * 60) + s;
+    return sign * (base + millis / 1000);
+  }
+
+  const numeric = Number(trimmed.replace(',', '.'));
+  return Number.isFinite(numeric) ? numeric : NaN;
+}
+
+function pickFirstFinite(values = []) {
+  for (const value of values) {
+    const parsed = parseSrtTimestamp(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return NaN;
+}
+
+function extractEntryTiming(entry = {}) {
+  const start = pickFirstFinite([
+    entry.startTime,
+    entry.start,
+    entry.begin,
+    entry.timecodeStart,
+  ]);
+
+  let end = pickFirstFinite([
+    entry.endTime,
+    entry.end,
+    entry.finish,
+    entry.timecodeEnd,
+  ]);
+
+  const duration = parseSrtTimestamp(entry.duration);
+  if (!Number.isFinite(end) && Number.isFinite(start) && Number.isFinite(duration)) {
+    end = start + duration;
+  }
+  if (!Number.isFinite(start) && Number.isFinite(end) && Number.isFinite(duration)) {
+    const computedStart = end - duration;
+    if (Number.isFinite(computedStart)) {
+      return {
+        start: Math.min(computedStart, end),
+        end: Math.max(computedStart, end),
+        mid: (computedStart + end) / 2,
+      };
+    }
+  }
+
+  if (!Number.isFinite(start) || !Number.isFinite(end)) {
+    return null;
+  }
+
+  const entryStart = Math.min(start, end);
+  const entryEnd = Math.max(start, end);
+  return {
+    start: entryStart,
+    end: entryEnd,
+    mid: (entryStart + entryEnd) / 2,
+  };
+}
+
+function computeSpeakerScores(timing, segments = [], speakerIds = [], margin = MERGE_GAP_SECONDS) {
+  if (!timing || !segments.length || !speakerIds.length) {
+    return new Map();
+  }
+
+  const scores = new Map();
+  for (const speaker of speakerIds) {
+    scores.set(speaker, {
+      overlap: 0,
+      distance: Infinity,
+      score: -Infinity,
+    });
+  }
+
+  const marginClamped = Math.max(0, Number(margin) || 0);
+
+  for (const seg of segments) {
+    if (!scores.has(seg.speaker)) continue;
+    const data = scores.get(seg.speaker);
+    const segStart = Number(seg.start);
+    const segEnd = Number(seg.end);
+    if (!Number.isFinite(segStart) || !Number.isFinite(segEnd)) continue;
+
+    const start = segStart - marginClamped;
+    const end = segEnd + marginClamped;
+    const overlap = Math.min(timing.end, end) - Math.max(timing.start, start);
+    if (overlap > 0) {
+      data.overlap += overlap;
+    }
+
+    const distance = timing.mid < start
+      ? start - timing.mid
+      : timing.mid > end
+        ? timing.mid - end
+        : 0;
+
+    if (distance < data.distance) {
+      data.distance = distance;
+    }
+  }
+
+  for (const speaker of speakerIds) {
+    const data = scores.get(speaker);
+    if (!data) continue;
+    if (data.overlap > 0) {
+      data.score = data.overlap - (data.distance === Infinity ? 0 : data.distance * 0.01);
+    } else if (Number.isFinite(data.distance)) {
+      data.score = -data.distance;
+    }
+  }
+
+  return scores;
+}
+
+function evaluateEntries(entries = [], entryTimings = [], segments = [], margin = MERGE_GAP_SECONDS) {
+  const speakerIds = [...new Set(segments.map(seg => seg.speaker))].sort((a, b) => a - b);
+  const scoresByEntry = entries.map(() => null);
+  if (!speakerIds.length) {
+    return { speakerIds, scoresByEntry };
+  }
+
+  for (let i = 0; i < entries.length; i++) {
+    const timing = entryTimings[i];
+    if (!timing) continue;
+    scoresByEntry[i] = computeSpeakerScores(timing, segments, speakerIds, margin);
+  }
+
+  return { speakerIds, scoresByEntry };
+}
+
+function applyScoresToEntries(entries = [], scoresByEntry = [], speakerIds = []) {
+  if (!speakerIds.length) return false;
+  let changed = false;
+
+  for (let i = 0; i < entries.length; i++) {
+    const scores = scoresByEntry[i];
+    if (!scores || !scores.size) continue;
+    let bestSpeaker = null;
+    let bestScore = -Infinity;
+
+    for (const speaker of speakerIds) {
+      const data = scores.get(speaker);
+      if (!data) continue;
+      const score = Number.isFinite(data.score) ? data.score : -Infinity;
+      if (score > bestScore + 1e-6 || (Math.abs(score - bestScore) <= 1e-6 && speaker < (bestSpeaker ?? Infinity))) {
+        bestScore = score;
+        bestSpeaker = speaker;
+      }
+    }
+
+    if (bestSpeaker != null && bestScore > -Infinity) {
+      const candidate = bestSpeaker + 1;
+      if (entries[i].speakerId !== candidate) {
+        entries[i].speakerId = candidate;
+        changed = true;
+      }
+    }
+  }
+
+  return changed;
+}
+
+function ensureSpeakerCoverage(entries = [], entryTimings = [], scoresByEntry = [], speakerIds = [], desiredCount = 1) {
+  if (desiredCount <= 1 || !speakerIds.length) {
+    return new Set(entries.map(e => e.speakerId)).size;
+  }
+
+  let assignedSet = new Set(entries.map(e => e.speakerId));
+  if (assignedSet.size >= desiredCount) return assignedSet.size;
+
+  const sortedEntries = entryTimings
+    .map((timing, idx) => ({ idx, start: timing?.start, mid: timing?.mid }))
+    .filter(item => Number.isFinite(item.start))
+    .sort((a, b) => (a.start - b.start) || (a.idx - b.idx));
+
+  const missingSpeakers = speakerIds
+    .map(sp => sp + 1)
+    .filter(id => !assignedSet.has(id));
+
+  for (const speakerId of missingSpeakers) {
+    if (assignedSet.size >= desiredCount) break;
+    const speaker = speakerId - 1;
+    let bestIdx = -1;
+    let bestScore = -Infinity;
+
+    for (const { idx } of sortedEntries) {
+      const data = scoresByEntry[idx]?.get(speaker);
+      if (!data) continue;
+      const score = Number.isFinite(data.score) ? data.score : -Infinity;
+      if (score > bestScore + 1e-6) {
+        bestScore = score;
+        bestIdx = idx;
+      }
+    }
+
+    if (bestIdx !== -1 && bestScore > -Infinity) {
+      entries[bestIdx].speakerId = speakerId;
+      assignedSet = new Set(entries.map(e => e.speakerId));
+    }
+  }
+
+  if (assignedSet.size >= desiredCount) return assignedSet.size;
+
+  if (speakerIds.length > 1 && sortedEntries.length) {
+    let pointer = 0;
+    for (const { idx } of sortedEntries) {
+      const speakerId = speakerIds[pointer % speakerIds.length] + 1;
+      if (entries[idx].speakerId !== speakerId) {
+        entries[idx].speakerId = speakerId;
+      }
+      assignedSet = new Set(entries.map(e => e.speakerId));
+      pointer++;
+      if (assignedSet.size >= desiredCount) break;
+    }
+  }
+
+  return assignedSet.size;
 }
 
 function mergeSegments(segments = []) {
@@ -211,7 +442,7 @@ export function assignSpeakersFromDiarization(srtJson = [], diarSegments = [], e
       const start = Number(seg.start);
       const end = Number(seg.end);
       const rawSpeaker = Number(seg.speaker ?? seg.speaker_id ?? seg.speakerId ?? 0);
-      const speaker = rawSpeaker > 0 ? rawSpeaker - 1 : 0;
+      const speaker = Number.isFinite(rawSpeaker) && rawSpeaker > 0 ? rawSpeaker - 1 : 0;
       return { start, end, speaker };
     })
     .filter(seg => Number.isFinite(seg.start) && Number.isFinite(seg.end) && seg.end > seg.start)
@@ -221,63 +452,98 @@ export function assignSpeakersFromDiarization(srtJson = [], diarSegments = [], e
     return new Map();
   }
 
+  const entryTimings = entries.map(extractEntryTiming);
+  if (!entryTimings.some(Boolean)) {
+    return new Map();
+  }
+
   const merged = mergeSegments(normalized);
   const limited = limitSegmentsToExpected(merged, expectedSpeakers);
-
   const segmentsForAssignment = mergeSegments(limited);
+  const assignmentSegments = segmentsForAssignment.length ? segmentsForAssignment : merged;
 
-  let pointer = 0;
-  for (const entry of entries) {
-    const start = parseSrtTimestamp(entry.startTime);
-    const end = parseSrtTimestamp(entry.endTime);
-    if (!Number.isFinite(start) || !Number.isFinite(end)) {
-      continue;
+  if (assignmentSegments.length) {
+    const initialEval = evaluateEntries(entries, entryTimings, assignmentSegments, MERGE_GAP_SECONDS);
+    applyScoresToEntries(entries, initialEval.scoresByEntry, initialEval.speakerIds);
+  }
+
+  const prioritizedEval = evaluateEntries(entries, entryTimings, assignmentSegments, MERGE_GAP_SECONDS);
+  const diarSpeakerCount = prioritizedEval.speakerIds.length;
+
+  let desiredSpeakers = diarSpeakerCount;
+  if (expectedSpeakers > 0) {
+    desiredSpeakers = diarSpeakerCount
+      ? Math.min(expectedSpeakers, diarSpeakerCount)
+      : expectedSpeakers;
+  }
+  if (diarSpeakerCount > 1) {
+    desiredSpeakers = Math.max(2, desiredSpeakers || 0);
+  }
+  if (!desiredSpeakers) {
+    desiredSpeakers = diarSpeakerCount || 1;
+  }
+
+  const durationBySpeaker = new Map();
+  for (const seg of assignmentSegments) {
+    const span = Number(seg.end) - Number(seg.start);
+    if (span > 0 && Number.isFinite(span)) {
+      durationBySpeaker.set(seg.speaker, (durationBySpeaker.get(seg.speaker) || 0) + span);
     }
+  }
 
-    const entryStart = Math.min(start, end);
-    const entryEnd = Math.max(start, end);
-    const mid = (entryStart + entryEnd) / 2;
+  const durationSortedSpeakers = [...durationBySpeaker.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0] - b[0])
+    .map(([speaker]) => speaker);
 
-    while (pointer < segmentsForAssignment.length - 1 && entryEnd > segmentsForAssignment[pointer].end) {
-      pointer++;
-    }
+  let assignedSet = new Set(entries.map(e => e.speakerId).filter(Boolean));
 
-    let bestSpeaker = null;
-    let bestOverlap = 0;
-    const searchStart = Math.max(0, pointer - 1);
+  if (assignedSet.size < desiredSpeakers && prioritizedEval.speakerIds.length) {
+    applyScoresToEntries(entries, prioritizedEval.scoresByEntry, prioritizedEval.speakerIds);
+    assignedSet = new Set(entries.map(e => e.speakerId).filter(Boolean));
+  }
 
-    for (let i = searchStart; i < segmentsForAssignment.length; i++) {
-      const seg = segmentsForAssignment[i];
-      if (seg.start - MERGE_GAP_SECONDS > entryEnd) break;
+  if (assignedSet.size < desiredSpeakers && prioritizedEval.speakerIds.length) {
+    const expandedSegments = assignmentSegments.map(seg => ({
+      start: Math.max(0, seg.start - MERGE_GAP_SECONDS),
+      end: seg.end + MERGE_GAP_SECONDS,
+      speaker: seg.speaker,
+    }));
 
-      const overlap = Math.min(entryEnd, seg.end) - Math.max(entryStart, seg.start);
-      if (overlap > 0 && (overlap > bestOverlap || (Math.abs(overlap - bestOverlap) <= 1e-6 && seg.speaker < (bestSpeaker ?? Infinity)))) {
-        bestOverlap = overlap;
-        bestSpeaker = seg.speaker;
-        pointer = i;
+    const expandedEval = evaluateEntries(entries, entryTimings, expandedSegments, MERGE_GAP_SECONDS);
+    if (expandedEval.speakerIds.length) {
+      applyScoresToEntries(entries, expandedEval.scoresByEntry, expandedEval.speakerIds);
+      assignedSet = new Set(entries.map(e => e.speakerId).filter(Boolean));
+      if (assignedSet.size < desiredSpeakers) {
+        ensureSpeakerCoverage(entries, entryTimings, expandedEval.scoresByEntry, expandedEval.speakerIds, desiredSpeakers);
+        assignedSet = new Set(entries.map(e => e.speakerId).filter(Boolean));
       }
     }
+  }
 
-    let chosenSpeaker = bestSpeaker;
-    if (chosenSpeaker == null) {
-      let bestDistance = Infinity;
-      let fallback = segmentsForAssignment[0]?.speaker ?? 0;
-      for (const seg of segmentsForAssignment) {
-        const distance = mid < seg.start
-          ? seg.start - mid
-          : mid > seg.end
-            ? mid - seg.end
-            : 0;
-        if (distance < bestDistance - 1e-6 || (Math.abs(distance - bestDistance) <= 1e-6 && seg.speaker < fallback)) {
-          bestDistance = distance;
-          fallback = seg.speaker;
-          if (distance === 0) break;
+  const allowedSpeakers = desiredSpeakers >= diarSpeakerCount
+    ? prioritizedEval.speakerIds
+    : durationSortedSpeakers.slice(0, desiredSpeakers);
+
+  if (allowedSpeakers.length && assignedSet.size > allowedSpeakers.length) {
+    const allowedSet = new Set(allowedSpeakers);
+    for (let i = 0; i < entries.length; i++) {
+      const current = entries[i].speakerId ? entries[i].speakerId - 1 : null;
+      if (current != null && allowedSet.has(current)) continue;
+
+      const scores = prioritizedEval.scoresByEntry[i];
+      let bestSpeaker = allowedSpeakers[0];
+      let bestScore = -Infinity;
+      for (const speaker of allowedSpeakers) {
+        const data = scores?.get(speaker);
+        const score = data && Number.isFinite(data.score) ? data.score : -Infinity;
+        if (score > bestScore + 1e-6 || (Math.abs(score - bestScore) <= 1e-6 && speaker < bestSpeaker)) {
+          bestScore = score;
+          bestSpeaker = speaker;
         }
       }
-      chosenSpeaker = fallback;
+      entries[i].speakerId = (bestSpeaker ?? allowedSpeakers[0]) + 1;
     }
-
-    entry.speakerId = chosenSpeaker + 1;
+    assignedSet = new Set(entries.map(e => e.speakerId).filter(Boolean));
   }
 
   const remap = new Map();
@@ -285,14 +551,17 @@ export function assignSpeakersFromDiarization(srtJson = [], diarSegments = [], e
   const finalMap = new Map();
 
   for (const entry of entries) {
-    const id = entry.speakerId || 1;
-    if (!remap.has(id)) {
-      remap.set(id, nextId++);
+    if (!entry.speakerId) {
+      entry.speakerId = 1;
     }
-    entry.speakerId = remap.get(id);
-    const list = finalMap.get(entry.speakerId) || [];
+    if (!remap.has(entry.speakerId)) {
+      remap.set(entry.speakerId, nextId++);
+    }
+    const remapped = remap.get(entry.speakerId);
+    entry.speakerId = remapped;
+    const list = finalMap.get(remapped) || [];
     list.push(entry);
-    finalMap.set(entry.speakerId, list);
+    finalMap.set(remapped, list);
   }
 
   return finalMap;
