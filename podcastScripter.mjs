@@ -23,7 +23,6 @@ import dotenv from 'dotenv';
 import { fetch as undiciFetch, ProxyAgent, Agent, setGlobalDispatcher } from 'undici';
 import { getAudioDurationInSeconds } from 'get-audio-duration';
 import { logNetworkError } from './logger.mjs';
-import { createClient as createDeepgramClient } from '@deepgram/sdk';
 import { createProfiles } from './rssUtils.mjs';
 import { applySpeakerMapping } from './diarizationMapping.mjs';
 import { assignSpeakersWithoutDiarization, assignSpeakersFromDiarization } from './speakerAssignment.mjs';
@@ -58,6 +57,8 @@ const openai = new OpenAI({
 
 /* Parser nur fürs spätere Einlesen der erzeugten SRT */
 const parser = new SRTParser();
+
+const DIARIZATION_LOG_PATH = path.join(__dirname, 'diarization-check.log');
 
 // Globale Wartezeit für 429-Responses (wird bei Erfolg zurückgesetzt)
 let rateLimitDelay = 1000;
@@ -114,109 +115,267 @@ function ensureSegments(resp, fallbackDurationSec) {
   return [{ id: 0, start: 0, end, text }];
 }
 
-/** Führt Sprecher-Diarisierung via Deepgram durch und liefert Segmente zurück. */
-async function diarizeWithDeepgram(mp3Pfad) {
-  const DG_API_KEY = process.env.DEEPGRAM_API_KEY;
-  if (!DG_API_KEY) {
-    console.warn('⚠️  Kein DEEPGRAM_API_KEY gesetzt – überspringe Diarisierung.');
-    return [];
+function pickFirstFiniteTime(values) {
+  for (const value of values || []) {
+    const seconds = srtTimeToSeconds(value);
+    if (Number.isFinite(seconds)) return seconds;
   }
-  const dg = createDeepgramClient(DG_API_KEY);
-  try {
-    const audioBuffer = fs.readFileSync(mp3Pfad);
-    const { result, error } = await dg.listen.prerecorded.transcribeFile(audioBuffer, {
-      diarize: true,
-      punctuate: false,
+  return null;
+}
+
+function buildDiarizationEntries(srtJson = []) {
+  const entries = [];
+  let lastEnd = 0;
+  for (let i = 0; i < srtJson.length; i++) {
+    const entry = srtJson[i] || {};
+    const start = pickFirstFiniteTime([
+      entry.startTime,
+      entry.start,
+      entry.begin,
+      entry.timecodeStart,
+    ]);
+    let end = pickFirstFiniteTime([
+      entry.endTime,
+      entry.end,
+      entry.finish,
+      entry.timecodeEnd,
+    ]);
+
+    if (!Number.isFinite(end) && Number.isFinite(start) && entry.duration) {
+      const dur = srtTimeToSeconds(entry.duration);
+      if (Number.isFinite(dur)) {
+        end = start + dur;
+      }
+    }
+
+    let startSec = Number.isFinite(start) ? start : lastEnd;
+    let endSec = Number.isFinite(end) ? end : Math.max(startSec, lastEnd);
+    if (endSec < startSec) {
+      const swap = startSec;
+      startSec = endSec;
+      endSec = swap;
+    }
+    if (endSec === startSec) {
+      endSec = startSec + 0.01;
+    }
+
+    const text = String(entry.text || '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    entries.push({
+      index: i + 1,
+      startSec,
+      endSec,
+      startLabel: formatTime(startSec),
+      endLabel: formatTime(endSec),
+      text,
     });
+    lastEnd = Math.max(lastEnd, endSec);
+  }
+  return entries;
+}
 
-    if (error) throw error;
+function buildDiarizationPrompt(entries, attempt, issues) {
+  const instructions = [
+    'Analysiere das folgende Podcast-Transkript mit Zeitstempeln.',
+    'Deine Aufgabe ist es, realistische Sprechersegmente zu erzeugen.',
+    'In Dialogen wechseln sich Sprecher häufig ab – achte auf plausible Wechsel und vermeide, dass ein Sprecher ununterbrochen dominiert, wenn das Gespräch offensichtlich weitergegeben wird.',
+    'Fasse zusammenhängende Passagen desselben Sprechers zu einem Segment zusammen.',
+    'Verwende Sprecher-IDs beginnend bei 1 und bleibe konsistent.',
+    'Gib ausschließlich ein JSON-Array zurück. Jedes Objekt enthält die Felder "start" (Sekunden, Zahl), "end" (Sekunden, Zahl) und "speaker" (positive ganze Zahl).',
+    'Die Start- und Endzeiten müssen monoton ansteigen und den SRT-Zeiten entsprechen.',
+  ];
 
-    const words = result?.results?.channels?.[0]?.alternatives?.[0]?.words || [];
-    if (!words.length) return [];
-    const parseSpeakerIdentifier = (value) => {
-      if (value === null || value === undefined) return null;
-      if (typeof value === 'number') {
-        return Number.isFinite(value) ? value : null;
-      }
+  if (attempt > 1 && issues?.length) {
+    instructions.push(`Beim vorherigen Versuch traten diese Probleme auf: ${issues.join('; ')}. Bitte behebe sie und liefere eine konsistente Zuordnung.`);
+  }
 
-      const text = String(value).trim();
-      if (!text) return null;
+  const transcript = entries
+    .map(e => {
+      const truncated = e.text.length > 400 ? `${e.text.slice(0, 400)}…` : e.text;
+      return `#${e.index} [${e.startLabel} – ${e.endLabel}] ${truncated}`;
+    })
+    .join('\n');
 
-      const directNumeric = text.match(/^[+-]?\d+$/);
-      if (directNumeric) {
-        const parsed = Number.parseInt(text, 10);
-        return Number.isFinite(parsed) ? parsed : null;
-      }
+  return `${instructions.join('\n')}
 
-      const labeledMatch = text.match(/speaker[_\s-]*(\d+)/i);
-      if (labeledMatch) {
-        const parsed = Number.parseInt(labeledMatch[1], 10);
-        return Number.isFinite(parsed) ? parsed : null;
-      }
+Transkript:
+${transcript}`;
+}
 
-      const alphaMatch = text.match(/^[A-Za-z]+$/);
-      if (alphaMatch) {
-        let valueAccumulator = 0;
-        for (const ch of text.toUpperCase()) {
-          const code = ch.charCodeAt(0);
-          if (code < 65 || code > 90) {
-            return null;
-          }
-          valueAccumulator = valueAccumulator * 26 + (code - 64);
-        }
-        return valueAccumulator;
-      }
-
-      const fallback = Number(text);
-      return Number.isFinite(fallback) ? fallback : null;
-    };
-
-    const toZeroBasedSpeaker = (value) => {
-      if (!Number.isFinite(value)) return 0;
-      if (value > 0) {
-        return Math.max(0, Math.floor(value - 1));
-      }
-      return Math.max(0, Math.floor(value));
-    };
-
-    const segments = [];
-    let current = null;
-    for (const w of words) {
-      const label = w.speaker ?? w.speaker_id ?? w.speaker_label ?? w.speakerId;
-      const rawSpeaker = parseSpeakerIdentifier(label);
-      const fallback = Number(label ?? 0);
-      const speaker = toZeroBasedSpeaker(rawSpeaker ?? fallback);
-      const start = Number(w.start);
-      const end = Number(w.end);
-      if (!Number.isFinite(start) || !Number.isFinite(end)) continue;
-      if (!current || current.speaker !== speaker) {
-        if (current) segments.push(current);
-        current = { start, end, speaker };
-      } else {
-        current.end = Math.max(current.end, end);
-      }
-    }
-    if (current) segments.push(current);
-    segments.sort((a, b) => a.start - b.start || a.speaker - b.speaker);
-    const merged = [];
-    const mergeGap = 0.35;
-    for (const seg of segments) {
-      const last = merged[merged.length - 1];
-      if (last && last.speaker === seg.speaker && seg.start <= last.end + mergeGap) {
-        last.end = Math.max(last.end, seg.end);
-      } else {
-        merged.push({ ...seg });
-      }
-    }
-    return merged.map(seg => ({
-      start: seg.start,
-      end: seg.end,
-      speaker: seg.speaker + 1,
-    }));
-  } catch (err) {
-    console.warn('⚠️  Deepgram-Diarisierung fehlgeschlagen:', err.message);
+function parseDiarizationResponse(text) {
+  if (!text) return [];
+  const trimmed = text.trim();
+  const fenceMatch = trimmed.match(/```json\s*([\s\S]*?)```/i);
+  const payload = fenceMatch ? fenceMatch[1] : trimmed;
+  let data;
+  try {
+    data = JSON.parse(payload);
+  } catch {
     return [];
   }
+  if (!Array.isArray(data)) return [];
+
+  const segments = [];
+  for (const item of data) {
+    if (!item) continue;
+    const start = Number(item.start ?? item.begin ?? item.from ?? item.timeStart);
+    const end = Number(item.end ?? item.finish ?? item.to ?? item.timeEnd);
+    const speakerMatch = String(item.speaker ?? item.label ?? '').match(/\d+/);
+    const speaker = speakerMatch ? Number.parseInt(speakerMatch[0], 10) : Number(item.speaker);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue;
+    if (!Number.isFinite(speaker) || speaker <= 0) continue;
+    segments.push({ start, end, speaker: Math.floor(speaker) });
+  }
+
+  segments.sort((a, b) => a.start - b.start || a.speaker - b.speaker);
+  return segments;
+}
+
+function analyzeDiarizationSegments(segments = [], entries = []) {
+  const issues = [];
+  const metrics = {
+    segments: Array.isArray(segments) ? segments.length : 0,
+    uniqueSpeakers: 0,
+    transitions: 0,
+    coverageRatio: null,
+  };
+
+  if (!Array.isArray(segments) || !segments.length) {
+    issues.push('keine Segmente geliefert');
+    return { plausible: false, issues, metrics };
+  }
+
+  const seenSpeakers = new Set();
+  let prevEnd = -Infinity;
+  let prevSpeaker = null;
+  let maxRun = 1;
+  let run = 1;
+
+  for (let i = 0; i < segments.length; i++) {
+    const seg = segments[i];
+    const start = Number(seg.start);
+    const end = Number(seg.end);
+    const speakerRaw = Number(seg.speaker);
+    const speaker = Number.isFinite(speakerRaw) ? Math.floor(speakerRaw) : NaN;
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
+      issues.push(`Segment ${i + 1} hat ungültige Zeiten`);
+      continue;
+    }
+    if (start < prevEnd - 0.1) {
+      issues.push(`Segment ${i + 1} beginnt vor Ende des vorherigen`);
+    }
+    const speakerValid = Number.isFinite(speaker) && speaker >= 1;
+    if (!speakerValid) {
+      issues.push(`Segment ${i + 1} hat ungültige Sprecher-ID`);
+    }
+    if (speakerValid) {
+      seenSpeakers.add(speaker);
+    }
+    if (i > 0 && speakerValid && Number.isFinite(prevSpeaker)) {
+      if (speaker !== prevSpeaker) {
+        metrics.transitions++;
+        run = 1;
+      } else {
+        run++;
+        if (run > maxRun) maxRun = run;
+      }
+    } else if (i > 0) {
+      run = 1;
+    }
+    prevEnd = end;
+    prevSpeaker = speakerValid ? speaker : NaN;
+  }
+
+  metrics.uniqueSpeakers = seenSpeakers.size;
+
+  const validEntries = entries.filter(e => Number.isFinite(e.startSec) && Number.isFinite(e.endSec) && e.endSec >= e.startSec);
+  let covered = 0;
+  for (const entry of validEntries) {
+    const mid = (entry.startSec + entry.endSec) / 2;
+    if (segments.some(seg => mid >= seg.start - 1e-3 && mid <= seg.end + 1e-3)) {
+      covered++;
+    }
+  }
+  metrics.coverageRatio = validEntries.length ? covered / validEntries.length : 1;
+
+  if (metrics.coverageRatio < 0.7) {
+    issues.push(`geringe Abdeckung der Transkriptzeilen (${(metrics.coverageRatio * 100).toFixed(1)}%)`);
+  }
+
+  if (metrics.uniqueSpeakers >= 2 && segments.length >= 4) {
+    const transitionRatio = (metrics.transitions) / (segments.length - 1 || 1);
+    if (transitionRatio < 0.2) {
+      issues.push('zu wenige Sprecherwechsel für einen Dialog');
+    }
+    const maxRunRatio = maxRun / segments.length;
+    if (maxRunRatio > 0.8) {
+      issues.push('ein Sprecher dominiert den Großteil der Segmente');
+    }
+  }
+
+  const plausible = issues.length === 0;
+  return { plausible, issues, metrics };
+}
+
+function logDiarizationCheck(attempt, result) {
+  if (!result) return;
+  const timestamp = new Date().toISOString();
+  const metrics = result.metrics || {};
+  const line = [
+    timestamp,
+    `attempt=${attempt}`,
+    `plausible=${result.plausible ? 'yes' : 'no'}`,
+    `segments=${metrics.segments ?? 0}`,
+    `uniqueSpeakers=${metrics.uniqueSpeakers ?? 0}`,
+    `transitions=${metrics.transitions ?? 0}`,
+    `coverage=${metrics.coverageRatio != null ? `${(metrics.coverageRatio * 100).toFixed(1)}%` : 'n/a'}`,
+    `issues=${result.issues && result.issues.length ? result.issues.join('; ') : 'none'}`,
+  ].join(' | ');
+  try {
+    fs.appendFileSync(DIARIZATION_LOG_PATH, `${line}\n`, 'utf-8');
+  } catch {}
+}
+
+async function diarizeWithGpt(srtJson, { maxAttempts = 3 } = {}) {
+  const entries = buildDiarizationEntries(Array.isArray(srtJson) ? srtJson : []);
+  const issuesForRetry = [];
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const prompt = buildDiarizationPrompt(entries, attempt, issuesForRetry);
+    let responseText = '';
+    try {
+      const response = await retryRequest(() => openai.responses.create({
+        model: 'gpt-4o',
+        instructions: 'Du bist ein gewissenhafter Assistent für Sprecher-Diarisierung.',
+        input: prompt,
+        temperature: 0.2,
+      }));
+      responseText = response.output_text;
+    } catch (err) {
+      console.warn(`⚠️  GPT-Diarisierung Versuch ${attempt} fehlgeschlagen: ${err.message || err}`);
+      const failure = {
+        plausible: false,
+        issues: [`OpenAI-Fehler: ${err.message || err}`],
+        metrics: { segments: 0, uniqueSpeakers: 0, transitions: 0, coverageRatio: 0 },
+      };
+      logDiarizationCheck(attempt, failure);
+      issuesForRetry.splice(0, issuesForRetry.length, ...failure.issues);
+      continue;
+    }
+
+    const segments = parseDiarizationResponse(responseText);
+    const analysis = analyzeDiarizationSegments(segments, entries);
+    logDiarizationCheck(attempt, analysis);
+    if (analysis.plausible) {
+      return segments;
+    }
+    console.warn(`⚠️  Diarisierungs-Check Versuch ${attempt} nicht plausibel: ${analysis.issues.join(', ')}`);
+    issuesForRetry.splice(0, issuesForRetry.length, ...analysis.issues);
+  }
+
+  return [];
 }
 
 /**
@@ -481,7 +640,7 @@ Nur die Namen, keine Kommentare.`;
     .filter(n => n && n.split(/\s+/).length <= 3);
   const knownNames = speakerProfiles.length ? speakerProfiles.map(p => p.name) : transcriptNames;
 
-  const diarSegments = await diarizeWithDeepgram(mp3Pfad);
+  const diarSegments = await diarizeWithGpt(srtJson);
   const diarSpeakerCount = new Set(
     diarSegments
       .map(seg => Number(seg?.speaker))
